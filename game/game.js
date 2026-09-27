@@ -36,7 +36,8 @@ const META_KEY="seventhLanternMetaV5";
 const DEFAULT_GAME_SETTINGS={master:.88,sfx:.86,ambience:.58,screenShake:true,flash:true,routeHints:true,ambientAccents:true};
 function readJsonStorage(key,fallback){try{const v=JSON.parse(localStorage.getItem(key));return v&&typeof v==="object"?v:fallback}catch(_e){return fallback}}
 let gameSettings={...DEFAULT_GAME_SETTINGS,...readJsonStorage(SETTINGS_KEY,{})};
-let metaProgress={completed:false,completions:0,endings:[],bestDifficulty:"",memoryFinds:[],visitedRegions:[],echoClears:0,...readJsonStorage(META_KEY,{})};
+let metaProgress={completed:false,completions:0,endings:[],bestDifficulty:"",memoryFinds:[],visitedRegions:[],echoClears:0,totalDeaths:0,bestClearMs:null,lastClear:null,...readJsonStorage(META_KEY,{})};
+let runStats={playMs:0,deaths:0,hitsTaken:0};
 if(!Array.isArray(metaProgress.endings))metaProgress.endings=[];
 if(!Array.isArray(metaProgress.memoryFinds))metaProgress.memoryFinds=[];
 if(!Array.isArray(metaProgress.visitedRegions))metaProgress.visitedRegions=[];
@@ -51,6 +52,11 @@ function persistSettings(){
   try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(gameSettings));}catch(_e){}
   window.AudioManager?.setVolumes?.({master:gameSettings.master,sfx:gameSettings.sfx,ambience:gameSettings.ambience});
   document.body.classList.toggle("low-flash",!gameSettings.flash);
+}
+function formatRunTime(ms){
+  if(!Number.isFinite(ms)||ms<=0)return "—";
+  const total=Math.max(0,Math.round(ms/1000)),m=Math.floor(total/60),s=total%60;
+  return `${m}:${String(s).padStart(2,"0")}`;
 }
 function persistMeta(){try{localStorage.setItem(META_KEY,JSON.stringify(metaProgress));}catch(_e){}refreshMetaButtons();}
 function refreshMetaButtons(){if(echoBtn)echoBtn.classList.toggle("hidden",!metaProgress.completed);}
@@ -73,7 +79,7 @@ function renderArchive(){
   const current=world?.chapterProgress?.story?.memoryFinds||[];
   const found=new Set([...(metaProgress.memoryFinds||[]),...current]);
   const visited=new Set([...(metaProgress.visitedRegions||[]),...Object.keys(world?.visitedRegions||{}).filter(k=>world.visitedRegions[k])]);
-  archiveSummary.innerHTML=`<span>旧事残片 ${found.size}/5</span><span>到访区域 ${visited.size}</span><span>通关 ${metaProgress.completions||0} 次</span><span>结局 ${(metaProgress.endings||[]).length}/3</span><span>回响通关 ${metaProgress.echoClears||0} 次</span>`;
+  archiveSummary.innerHTML=`<span>旧事残片 ${found.size}/5</span><span>到访区域 ${visited.size}</span><span>通关 ${metaProgress.completions||0} 次</span><span>结局 ${(metaProgress.endings||[]).length}/3</span><span>回响通关 ${metaProgress.echoClears||0} 次</span><span>最快通关 ${formatRunTime(metaProgress.bestClearMs)}</span><span>累计死亡 ${metaProgress.totalDeaths||0}</span>`;
   const endingNames={keep:"名字留下",return:"记忆归灯",extinguish:"第七盏灯熄灭"};
   const memories=MEMORY_ARCHIVE.map((m,i)=>found.has(m.id)?
     `<article class="archive-card found"><small>${m.chapter}</small><b>${i+1}. ${m.title}</b><p>${m.text}</p><span class="archive-seal">已拾</span></article>`:
@@ -671,7 +677,7 @@ function restoreChapterRuntime(){
 
 const SAVE_KEY="seventhLanternSave";
 const SAVE_BACKUP_KEY="seventhLanternSaveBackup";
-const SAVE_VERSION=4;
+const SAVE_VERSION=5;
 function parseSave(raw){try{const s=JSON.parse(raw);return s&&typeof s==="object"&&Number.isFinite(s.savedAt)?s:null}catch(_e){return null}}
 function saveLooksUsable(s){
   if(!s||!Number.isFinite(s.savedAt))return false;
@@ -1248,6 +1254,7 @@ function resetPlayer(x=220,y=480){
 function startGame(diff="normal", fromSave=false, assetsConfirmed=false){
   if(!assetsConfirmed&&!requiredAssetsReady()){ensureAssetsThenStart(diff,fromSave);return;}
   difficulty=diff; dialogueQueue=[]; currentDialogue=null; dialogueEl.classList.remove("visible"); buildWorld(); resetPlayer();
+  runStats={playMs:0,deaths:0,hitsTaken:0};
   hidePanels(); state="playing";
   if(fromSave){
     try{
@@ -1301,6 +1308,7 @@ function startGame(diff="normal", fromSave=false, assetsConfirmed=false){
         world.puzzleHintCooldowns=Object.create(null);
         world.clueReaction={active:false,timer:0,id:'',kind:''};
         world.tutorialFlags={lampRaisedOnce:!!save.tutorialFlags?.lampRaisedOnce,shadowRevealLearned:!!save.tutorialFlags?.shadowRevealLearned,interactSwitchLearned:!!save.tutorialFlags?.interactSwitchLearned,ritualCutLearned:!!save.tutorialFlags?.ritualCutLearned,lanternCoreLearned:!!save.tutorialFlags?.lanternCoreLearned};
+        runStats={playMs:Number(save.runStats?.playMs)||0,deaths:Number(save.runStats?.deaths)||0,hitsTaken:Number(save.runStats?.hitsTaken)||0};
         restoreChapterRuntime();
         for(const c of world.checkpoints)c.lit=c.lit||c.x<=player.checkpointX+2;
         cameraX=clamp(player.x-W*.35,0,world.width-W);resetCameraRuntime();
@@ -1327,7 +1335,7 @@ function saveGame(options={}){
     puzzleStep:world.puzzleStep,switches:world.switches.filter(s=>s.lit).map(s=>s.id),bossDefeated:world.bossDefeated,
     lanternsRecovered:world.lanternsRecovered,currentRegion:resumeRegion,
     chapterProgress:world.chapterProgress,ritualBladeUnlocked:world.ritualBladeUnlocked,
-    visitedRegions:Object.keys(world.visitedRegions).filter(k=>world.visitedRegions[k]),clueReactionSeen:Object.keys(world.clueReactionSeen||{}).filter(k=>world.clueReactionSeen[k]),npcRevealSeen:Object.keys(world.npcRevealSeen||{}).filter(k=>world.npcRevealSeen[k]),tutorialFlags:{...world.tutorialFlags}};
+    visitedRegions:Object.keys(world.visitedRegions).filter(k=>world.visitedRegions[k]),clueReactionSeen:Object.keys(world.clueReactionSeen||{}).filter(k=>world.clueReactionSeen[k]),npcRevealSeen:Object.keys(world.npcRevealSeen||{}).filter(k=>world.npcRevealSeen[k]),tutorialFlags:{...world.tutorialFlags},runStats:{...runStats}};
   try{
     const payload=JSON.stringify(data);
     const previous=localStorage.getItem(SAVE_KEY),previousParsed=parseSave(previous);
@@ -1482,6 +1490,7 @@ function resetBossEncounterAfterDeath(){
   return true;
 }
 function beginPaperDeath(){
+  runStats.deaths=(runStats.deaths||0)+1;
   player.dead=true;player.deathPhase='collapse';player.deathVisualTimer=0;player.deathTimer=1.95;
   player.vx=0;player.vy=0;player.charging=false;player.chargeLevel=0;
   world.paperDeathFx=[];
@@ -1563,7 +1572,7 @@ function respawn(){
 
 function damagePlayer(amount,dir=0){
   if(player.invuln>0||player.dodging>0||player.dead) return;
-  const mult=difficultyValues[difficulty].enemyDamage;
+  const mult=difficultyValues[difficulty].enemyDamage;runStats.hitsTaken=(runStats.hitsTaken||0)+1;
   player.vx=dir*190; player.vy=-170; player.charging=false;player.chargeLevel=0;sound.hurt(); shake=10; hitStop=.045;
   player.health=clamp(player.health-amount*mult,0,player.maxHealth); player.invuln=.8; player.hurtTimer=.22;
   kickCamera((dir||-player.facing)*9,-5);registerImpact(player.x+player.w*.5,player.y+player.h*.42,"#e6c7a2",1.2);
@@ -2423,6 +2432,9 @@ function recordRunCompletion(){
   const rank={story:1,normal:2,hard:3,echo:4};
   if((rank[difficulty]||0)>(rank[metaProgress.bestDifficulty]||0))metaProgress.bestDifficulty=difficulty;
   if(difficulty==="echo")metaProgress.echoClears=(metaProgress.echoClears||0)+1;
+  metaProgress.totalDeaths=(metaProgress.totalDeaths||0)+(runStats.deaths||0);
+  if(runStats.playMs>0&&(metaProgress.bestClearMs==null||runStats.playMs<metaProgress.bestClearMs))metaProgress.bestClearMs=Math.round(runStats.playMs);
+  metaProgress.lastClear={difficulty,ending:world.finalChoice||"",playMs:Math.round(runStats.playMs||0),deaths:runStats.deaths||0,hitsTaken:runStats.hitsTaken||0,memories:(world.chapterProgress?.story?.memoryFinds||[]).length,at:Date.now()};
   persistMeta();
 }
 function beginEpilogue(choiceId){
@@ -3018,6 +3030,7 @@ function update(dt){
   sound.update(world.epilogueActive?"epilogue":world.currentRegion,dt);
   if(hitStop>0){hitStop=Math.max(0,hitStop-dt);pressed.clear();released.clear();return;}
   if(state!=="playing"||currentDialogue){pressed.clear();released.clear();return;}
+  runStats.playMs=(runStats.playMs||0)+dt*1000;
   if(world.endingChoiceActive){
     if(pressed.has("escape")){world.endingChoiceActive=false;showToast("第七盏灯仍在等你",1.8);}
     if(pressed.has("a")||pressed.has("w")){world.endingChoiceIndex=(world.endingChoiceIndex+ENDING_CHOICES.length-1)%ENDING_CHOICES.length;sound.play("ui_select",{volume:.18});}
