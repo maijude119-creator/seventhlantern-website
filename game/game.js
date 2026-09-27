@@ -732,7 +732,10 @@ function drawSceneAsset(_zone){
   return true;
 }
 
-function showGuidance(title,text,key="",time=5){ const cap=title==="纸身初醒"?5.5:4.4;guidance={title,text,key,timer:Math.min(time,cap)}; }
+function showGuidance(title,text,key="",time=5){
+  if(!gameSettings.routeHints&&title!=="纸身初醒"&&title!=="封门"&&title!=="裂墙挡路")return;
+  const cap=title==="纸身初醒"?5.5:4.4;guidance={title,text,key,timer:Math.min(time,cap)};
+}
 
 const difficultyValues = {
   story: { enemyDamage: .65, enemyHealth: .78, parry: .28, dodgeInvuln:.31, bossVolley:.78, bossProjectileSpeed:.90, label: "引灯" },
@@ -763,7 +766,7 @@ const PUZZLE_HINTS={
     2:{text:"逐项核对倒影方向、回应铜片、旧名与第七空位，再点亮晶石。"}
   }}
 };
-function puzzleHintLevel(){return difficulty==="story"?2:difficulty==="normal"?1:0;}
+function puzzleHintLevel(){if(!gameSettings.routeHints)return 0;return difficulty==="story"?2:difficulty==="normal"?1:0;}
 function showPuzzleFailureHint(chapter,code,context={}){
   const level=puzzleHintLevel();if(level<=0)return false;
   if(!world.puzzleHintCooldowns)world.puzzleHintCooldowns=Object.create(null);
@@ -795,6 +798,7 @@ class Sound {
     }
   }
   ambientAccent(region){
+    if(!gameSettings.ambientAccents)return false;
     if(region==="opera")return this.play("gong_low",{volume:.045,rate:.72,cooldown:2});
     if(region==="bamboo")return this.play("temple_bell_far",{volume:.05,rate:.80,cooldown:2});
     if(region==="ferry")return this.play("temple_bell_far",{volume:.025,rate:.64,cooldown:2});
@@ -1747,6 +1751,7 @@ function createDirectionalBurst(x,y,color,count=6,dir=1,power=1){
   }
 }
 function kickCamera(x=0,y=0){
+  if(!gameSettings.screenShake)return;
   cameraKickX=clamp(cameraKickX+x,-18,18);cameraKickY=clamp(cameraKickY+y,-14,14);
 }
 function registerImpact(x,y,color="#ffe2ad",power=1){
@@ -4232,7 +4237,7 @@ function drawRegionAmbienceV4(){
   ctx.restore();ctx.globalAlpha=1;
 }
 function objectiveHintTarget(){
-  if(routeHintIdle<5.4||!["opera","bamboo","ferry","city","final"].includes(world.currentRegion))return null;
+  if(!gameSettings.routeHints||routeHintIdle<5.4||!["opera","bamboo","ferry","city","final"].includes(world.currentRegion))return null;
   const p=world.chapterProgress?.[world.currentRegion];if(!p||p.solved)return null;
   const candidates=CHAPTER_INTERACTABLES.filter(o=>o.chapter===world.currentRegion&&chapterObjectVisible(o)&&chapterObjectNeedsAttention(o,p));
   if(!candidates.length)return null;
@@ -4346,7 +4351,7 @@ function drawLightingV3(){
 function drawCombatOverlayV5(){
   ctx.save();if(player.health<35&&!player.dead){const a=(1-player.health/35)*.27*(.78+Math.sin(gameTime*3.2)*.22),g=ctx.createRadialGradient(W/2,H/2,220,W/2,H/2,720);g.addColorStop(0,"transparent");g.addColorStop(1,`rgba(112,34,26,${a})`);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.globalAlpha=a*.75;ctx.strokeStyle="#6f452f";ctx.lineWidth=2;ctx.setLineDash([9,7]);ctx.strokeRect(8,8,W-16,H-16);ctx.setLineDash([]);}
   if(world.bossActive&&world.boss?.phase===3){ctx.globalAlpha=.08+.03*Math.sin(gameTime*5);ctx.fillStyle="#9b1e2e";ctx.fillRect(0,0,W,H);}
-  if(impactFlash>0){ctx.globalAlpha=impactFlash*2.8;ctx.fillStyle="#fff1cf";ctx.fillRect(0,0,W,H);}ctx.restore();
+  if(gameSettings.flash&&impactFlash>0){ctx.globalAlpha=impactFlash*2.8;ctx.fillStyle="#fff1cf";ctx.fillRect(0,0,W,H);}ctx.restore();
 }
 function drawEpilogueVisuals(){
   if(!world.epilogueActive)return;
@@ -4499,7 +4504,7 @@ function drawAssetQAOverlay(){
 
 function render(){
   const simulationState=applyRenderInterpolation();
-  ctx.save();const jitter=shake*.46;ctx.translate((jitter>0?rand(-jitter,jitter):0)+cameraKickX,(jitter>0?rand(-jitter,jitter):0)+cameraKickY);
+  ctx.save();const jitter=gameSettings.screenShake?shake*.46:0;ctx.translate((jitter>0?rand(-jitter,jitter):0)+(gameSettings.screenShake?cameraKickX:0),(jitter>0?rand(-jitter,jitter):0)+(gameSettings.screenShake?cameraKickY:0));
   ctx.save();ctx.filter="saturate(0.80) brightness(0.90)";
   const activeRegion=sceneRegionAt(cameraX+W*.5);
   const useProductionScene=productionRegionId(activeRegion.id)&&window.ProductionAssets?.drawScene;
@@ -4564,6 +4569,18 @@ document.getElementById("resumeBtn").onclick=()=>{clearTransientInputState();hid
 document.getElementById("restartBtn").onclick=()=>{hidePanels();state="playing";respawn();};
 document.getElementById("quitBtn").onclick=()=>{if(world&&player&&!player.dead)saveGame({resumeRegion:world.currentRegion});clearTransientInputState();state="menu";window.AudioManager?.stopEnvironment?.();sound.started=false;sound.ambienceRegion="";showPanel(menu);};
 document.getElementById("fullscreen").onclick=()=>{if(!document.fullscreenElement)document.getElementById("app").requestFullscreen?.();else document.exitFullscreen?.();};
+document.getElementById("settingsBtn")?.addEventListener("click",()=>{applySettingsToUI();showPanel(settingsPanel);});
+document.getElementById("pauseSettingsBtn")?.addEventListener("click",()=>{applySettingsToUI();showPanel(settingsPanel);});
+document.getElementById("settingsClose")?.addEventListener("click",()=>showPanel(state==="paused"?pausePanel:menu));
+document.getElementById("archiveBtn")?.addEventListener("click",()=>{renderArchive();showPanel(archivePanel);});
+document.getElementById("pauseArchiveBtn")?.addEventListener("click",()=>{renderArchive();showPanel(archivePanel);});
+document.getElementById("archiveClose")?.addEventListener("click",()=>showPanel(state==="paused"?pausePanel:menu));
+for(const [id,key] of [["masterVolume","master"],["sfxVolume","sfx"],["ambienceVolume","ambience"]]){
+  const el=document.getElementById(id);el?.addEventListener("input",()=>{gameSettings[key]=clamp(Number(el.value)/100,0,1);const out=document.getElementById(id+"Value");if(out)out.textContent=el.value;persistSettings();});
+}
+for(const [id,key] of [["screenShakeSetting","screenShake"],["flashSetting","flash"],["routeHintSetting","routeHints"],["ambientAccentSetting","ambientAccents"]]){
+  const el=document.getElementById(id);el?.addEventListener("change",()=>{gameSettings[key]=!!el.checked;persistSettings();});
+}
 
 try{if(loadBestSave())continueBtn.classList.remove("hidden");}catch(_e){}
 function clearTransientInputState(){
