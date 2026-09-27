@@ -1,6 +1,7 @@
 (() => {
   const cfg=window.SEVENTH_LANTERN_CONFIG||{};
   document.querySelectorAll('[data-version]').forEach(el=>el.textContent=cfg.version||'v1.0.0');
+  document.querySelectorAll('[data-web-version]').forEach(el=>el.textContent=cfg.webGameVersion||cfg.version||'v1.0.0');
   const header=document.querySelector('.site-header');
   const progressBar=document.getElementById('pageProgressBar');
   const hero=document.querySelector('.hero');
