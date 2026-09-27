@@ -28,6 +28,8 @@
     const closeMenu=()=>{mainNav.classList.remove('open');menuToggle.classList.remove('open');menuToggle.setAttribute('aria-expanded','false');document.body.classList.remove('nav-open')};
     menuToggle.addEventListener('click',()=>{const open=!mainNav.classList.contains('open');mainNav.classList.toggle('open',open);menuToggle.classList.toggle('open',open);menuToggle.setAttribute('aria-expanded',String(open));document.body.classList.toggle('nav-open',open)});
     mainNav.querySelectorAll('a').forEach(a=>a.addEventListener('click',closeMenu));
+    document.addEventListener('click',e=>{if(mainNav.classList.contains('open')&&!mainNav.contains(e.target)&&!menuToggle.contains(e.target))closeMenu()});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mainNav.classList.contains('open'))closeMenu()});
   }
 
   const homeNavLinks=[...document.querySelectorAll('#mainNav a[href^="#"]')];
