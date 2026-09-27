@@ -1,0 +1,23 @@
+《第7盏灯》官网 · GitHub + Vercel 自动更新版
+
+目标：只做一次绑定，以后不再手动覆盖网站文件。
+
+你现在只需要：
+1. 解压整个 ZIP。
+2. 双击“一键开启自动更新.bat”。
+3. 第一次可能会打开 GitHub 和 Vercel 登录页面，按提示登录即可。
+4. Vercel 如果问是否连接已有项目：选 Yes。
+5. 项目名使用：seventhlanternwebsitevercelready-1
+
+脚本会自动：
+- 创建 GitHub 仓库：maijude119-creator/seventhlantern-website
+- 上传当前官网 v1.2（包括在线试玩和 Windows 下载包）
+- 连接已有 Vercel 项目
+- 执行 vercel git connect
+
+完成后的工作方式：
+你在 ChatGPT 里说“修改网站” → 我修改 GitHub → Vercel 自动重新部署 → 你刷新网站看结果。
+
+说明：
+- 第一次上传约 159MB，取决于网络速度，可能需要几分钟。
+- downloads/SeventhLantern_v1.0.0_Windows.zip 约 78MB，低于 GitHub 单文件 100MB 硬限制，但 GitHub 可能提示大文件警告，这是正常的。

@@ -1,0 +1,12 @@
+[
+  {"id":"ITEM_Key","name":"旧铜钥匙","sprite":"ITEM_Key.png","type":"key","description":"无阴镇旧宅使用的铜钥匙。","canInteract":true,"canPickup":true,"canUse":true},
+  {"id":"ITEM_Talisman","name":"引魂符","sprite":"ITEM_Talisman.png","type":"ritual","description":"沈婆写下的引魂符，遇异常灯影会轻微发热。","canInteract":true,"canPickup":true,"canUse":true},
+  {"id":"ITEM_Matches","name":"火柴","sprite":"ITEM_Matches.png","type":"tool","description":"受潮后仍剩少量可用火柴。","canInteract":true,"canPickup":true,"canUse":true},
+  {"id":"ITEM_LampOil","name":"灯油","sprite":"ITEM_LampOil.png","type":"consumable","description":"纸扎铺调制的低烟灯油。","canInteract":true,"canPickup":true,"canUse":true},
+  {"id":"ITEM_Bell","name":"铜铃","sprite":"ITEM_Bell.png","type":"clue","description":"声音可以扰动看不见的影。","canInteract":true,"canPickup":true,"canUse":true},
+  {"id":"ITEM_PaperDoll","name":"纸人","sprite":"ITEM_PaperDoll.png","type":"clue","description":"竹骨纸身，背面写着已经模糊的生辰。","canInteract":true,"canPickup":true,"canUse":false},
+  {"id":"ITEM_OldPhoto","name":"旧照片","sprite":"ITEM_OldPhoto.png","type":"memory","description":"被河水浸过的合影。","canInteract":true,"canPickup":true,"canUse":false},
+  {"id":"ITEM_Note","name":"烧焦纸条","sprite":"ITEM_Note.png","type":"quest","description":"写着寻找六盏灯，以及不要点燃第七盏。","canInteract":true,"canPickup":true,"canUse":false},
+  {"id":"ITEM_TalismanBundle","name":"符纸束","sprite":"ITEM_TalismanBundle.png","type":"ritual","description":"纸扎铺整理好的符纸束。","canInteract":true,"canPickup":false,"canUse":false},
+  {"id":"WPN_RitualBlade","name":"仪式短刃","sprite":"../Weapons/WPN_RitualBlade.png","type":"weapon","description":"资产库中的仪式用短刃；当前试玩战斗仍使用裁魂尺。","canInteract":true,"canPickup":false,"canUse":false}
+]

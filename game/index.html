@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>第七盏灯</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="app">
+    <canvas id="game" width="1920" height="1080" aria-label="第七盏灯游戏画面"></canvas>
+    <section id="menu" class="panel visible">
+      <div class="seal">柒</div>
+      <p class="eyebrow">东方志怪 · 横版冒险解谜</p>
+      <h1>第七盏灯</h1>
+      <p class="subtitle">灯照活人，影送亡魂。<br>但第七盏灯，不该被点亮。</p>
+      <button id="startBtn">开始游戏</button>
+      <button id="continueBtn" class="secondary hidden">继续上次旅程</button>
+      <button id="helpBtn" class="ghost">操作说明</button>
+      <p class="foot">建议使用 Chrome / Edge，打开声音并佩戴耳机</p>
+    </section>
+
+    <section id="difficulty" class="panel">
+      <p class="eyebrow">选择旅途难度</p>
+      <h2>今夜，你如何行走？</h2>
+      <div class="choices">
+        <button data-difficulty="story"><b>引灯</b><span>重叙事，战斗宽松</span></button>
+        <button data-difficulty="normal"><b>夜行</b><span>标准体验，推荐</span></button>
+        <button data-difficulty="hard"><b>无明</b><span>敌人更危险</span></button>
+      </div>
+      <button id="backBtn" class="ghost">返回</button>
+    </section>
+
+    <section id="help" class="panel wide">
+      <p class="eyebrow">操作说明</p>
+      <h2>纸身也会记住动作</h2>
+      <div class="keygrid">
+        <div><kbd>A</kbd><kbd>D</kbd><span>左右移动</span></div>
+        <div><kbd>J</kbd><span>裁魂尺攻击（三段连击）</span></div>
+        <div><kbd>K</kbd><span>跳跃</span></div>
+        <div><kbd>L</kbd><span>快速后撤</span></div>
+        <div><kbd>E</kbd><span>调查 / 拾取</span></div>
+        <div><kbd>Q</kbd><span>举灯 / 收灯</span></div>
+        <div><kbd>W</kbd><kbd>S</kbd><span>举灯时调整照射角度</span></div>
+        <div><kbd>Esc</kbd><span>暂停</span></div>
+      </div>
+      <p class="hint">长按 J 后松开可蓄力击退。Q 切换举灯 / 收灯；举灯时用 W / S 调整光束。影祟被灯照实后，裁魂尺才能真正命中。</p>
+      <button id="helpClose">明白了</button>
+    </section>
+
+    <section id="pause" class="panel">
+      <p class="eyebrow">旅途暂停</p>
+      <h2>雨仍在下</h2>
+      <button id="resumeBtn">继续</button>
+      <button id="restartBtn" class="secondary">从存档灯重生</button>
+      <button id="quitBtn" class="ghost">返回标题</button>
+    </section>
+
+    <div id="dialogue" class="dialogue">
+      <canvas id="portraitCanvas" width="180" height="180" aria-hidden="true"></canvas>
+      <div class="dialogue-copy">
+        <span id="speaker"></span>
+        <p id="dialogueText"></p>
+        <small>按 E 继续</small>
+      </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <button id="fullscreen" title="全屏">⛶</button>
+  </main>
+  <script src="character_scale.js"></script>
+  <script src="audio_manager.js"></script>
+  <script src="production_assets.js"></script>
+  <script src="game.js"></script>
+  <script src="motion.js"></script>
+</body>
+</html>
