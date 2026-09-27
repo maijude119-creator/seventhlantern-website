@@ -1527,9 +1527,12 @@ function processAttack(){
     a.hit.add(e);e.hp-=damage;e.hurt=.18;e.vx=player.facing*(a.knockback||(a.charged?260:135));
     if(a.type==="ritual"&&toolState.cuttable){world.tutorialFlags.ritualCutLearned=true;window.AudioManager?.play('ritual_cut_paper',{volume:.58});}
     else if(a.type==="ruler")window.AudioManager?.play('ruler_hit');
-    shake=Math.max(shake,a.charged?10:(a.shake||4));hitStop=Math.max(hitStop,a.charged?.07:(a.hitStop||.04));impactFlash=Math.max(impactFlash,a.charged?.13:(a.impact||.06));
+    shake=Math.max(shake,a.charged?8:(a.shake||4)*.8);hitStop=Math.max(hitStop,a.charged?.07:(a.hitStop||.04));impactFlash=Math.max(impactFlash,a.charged?.10:(a.impact||.05));
+    const hitX=e.x+e.w/2,hitY=e.y+e.h*.52;
+    kickCamera(player.facing*(a.charged?7:3),a.charged?-2.4:-1);registerImpact(hitX,hitY,feedbackColor,a.charged?1.5:1);
+    createDirectionalBurst(hitX,hitY,feedbackColor,a.charged?10:6,player.facing,a.charged?1.2:.85);
     world.floaters.push({x:e.x+e.w/2,y:e.y-6,text:`${Math.round(damage)}`,life:.72,max:.72,vy:-34,color:feedbackColor});
-    createBurst(e.x+e.w/2,e.y+e.h/2,feedbackColor,8);spawnSpriteFx("vfxImpact",e.x+e.w/2,e.y+e.h*.65,a.charged?92:68,.18,player.facing<0);
+    createBurst(hitX,hitY,feedbackColor,a.charged?6:4);spawnSpriteFx("vfxImpact",e.x+e.w/2,e.y+e.h*.65,a.charged?92:68,.18,player.facing<0);
     if(e.hp<=0) killEnemy(e);
   }
   const bossHurtbox=getBossHurtbox(world.boss);
@@ -1547,10 +1550,12 @@ function processAttack(){
     }
     a.hit.add(world.boss); world.boss.hp-=a.damage; world.boss.hurt=.16; sound.hit();
     bossNarrativeBeat(world.boss,"first_hit","“阿砚。”");
-    hitStop=Math.max(hitStop,a.charged ? .075 : .045);shake=Math.max(shake,a.charged?11:7);impactFlash=Math.max(impactFlash,a.charged ? .12 : .075);
+    hitStop=Math.max(hitStop,a.charged ? .075 : .045);shake=Math.max(shake,a.charged?9:6);impactFlash=Math.max(impactFlash,a.charged ? .10 : .065);
     const hx=bossHurtbox.x+bossHurtbox.w*.5,hy=bossHurtbox.y+bossHurtbox.h*.55;
+    kickCamera(player.facing*(a.charged?9:5),a.charged?-3:-1.5);registerImpact(hx,hy,a.charged?"#f0b85b":"#d06a4b",a.charged?1.8:1.2);
+    createDirectionalBurst(hx,hy,a.charged?"#f0b85b":"#d06a4b",a.charged?12:7,player.facing,a.charged?1.3:1);
     world.floaters.push({x:hx,y:bossHurtbox.y+18,text:`${Math.round(a.damage)}`,life:.72,max:.72,vy:-34,color:"#ffd08a"});
-    createBurst(hx,hy,a.charged?"#f0b85b":"#b84031",a.charged?10:6);spawnSpriteFx("vfxImpact",hx,hy+22,a.charged?112:86,.2,player.facing<0);
+    createBurst(hx,hy,a.charged?"#f0b85b":"#b84031",a.charged?7:4);spawnSpriteFx("vfxImpact",hx,hy+22,a.charged?112:86,.2,player.facing<0);
     if(world.boss.hp<=0) defeatBoss();
   }
   for(const s of world.switches){
@@ -2686,7 +2691,10 @@ function queueBossAttack(b){
 function bossAttack(b){
   const attackId=b.queuedAttackId||chooseBossAttack(b);
   b.lastAttackId=attackId;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphLabel="";
-  b.attackFlash=.32;shake=Math.max(shake,7);sound.play("boss_attack",{volume:.50});
+  b.attackFlash=.32;shake=Math.max(shake,5.5);sound.play("boss_attack",{volume:.50});
+  if(/Wave/.test(attackId)||attackId==="fanWave")kickCamera(0,5);
+  else if(/dash/i.test(attackId))kickCamera((b.telegraphDir||-1)*6,-2);
+  else kickCamera((b.telegraphDir||-1)*2.5,-1);
   const origin={x:b.x+b.w*.5,y:b.y+(b.phase===1?96:b.phase===2?118:76)};
   const aim=Math.atan2((getPlayerHurtbox().y+getPlayerHurtbox().h*.5)-origin.y,(getPlayerHurtbox().x+getPlayerHurtbox().w*.5)-origin.x);
   const speedMul=difficultyValues[difficulty].bossProjectileSpeed||1;
@@ -2739,7 +2747,7 @@ function updateBoss(dt){
     window.AudioManager?.play('boss_phase_change',{volume:.42});
     if(desiredPhase===2){window.AudioManager?.play('gong_low',{volume:.22});window.AudioManager?.play('temple_bell_far',{volume:.18});}
     if(desiredPhase===3){bossNarrativeBeat(b,"phase3","“不是你的名字。”");window.AudioManager?.play('ferry_water',{volume:.16});}
-    shake=Math.max(shake,12);impactFlash=Math.max(impactFlash,.08);
+    shake=Math.max(shake,9);kickCamera(0,-7);impactFlash=Math.max(impactFlash,.07);
   }
 
   const bossGround=getPrimaryGroundAt(b.x+b.w*.5);
@@ -2748,7 +2756,7 @@ function updateBoss(dt){
   if(b.phaseTransition>0){
     b.phaseTransition=Math.max(0,b.phaseTransition-dt);
     if(b.phaseTransition<=0&&b.pendingPhase){
-      b.phase=b.pendingPhase;b.lastPhase=b.phase;b.pendingPhase=null;b.timer=.62;b.windup=0;b.dash=0;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphLabel="";b.telegraphLabel="";b.telegraphTotal=0;
+      b.phase=b.pendingPhase;b.lastPhase=b.phase;b.pendingPhase=null;b.timer=.62;b.windup=0;b.dash=0;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphLabel="";b.telegraphTotal=0;
       if(b.phase===2&&!b.voiceTrialDone){
         b.voiceTrial=true;b.voiceProbe=[0,0,0];b.voiceRevealed=[false,false,false];b.timer=999;
         bossNarrativeBeat(b,"voice_trial","“第七个。”");
