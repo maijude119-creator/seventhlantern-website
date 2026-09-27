@@ -321,7 +321,7 @@
     const phase = b?.pendingPhase || b?.phase || 1;
     const t = gameTime || 0;
     const pulse = Math.sin(t * (phase === 3 ? 5.2 : 2.1));
-    const total=b?.phaseTransitionTotal||.46;
+    const total=b?.phaseTransitionTotal||.58;
     const transition = b?.phaseTransition>0 ? clamp(1-(b.phaseTransition/total),0,1) : 1;
     const transitionPunch = b?.pendingPhase ? Math.sin(transition*Math.PI) : 0;
     const dashProgress = b?.dash > 0 ? clamp(1-b.dash/(b.dashTotal||.48),0,1) : 0;
