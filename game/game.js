@@ -233,6 +233,8 @@ function missingRequiredAssets(){
   if(st?.missing?.length)missing.push(...st.missing.map(k=>`production:${k}`));
   return missing;
 }
+window.GameAssetStatus=()=>{const prod=window.ProductionAssets?.getStatus?.()||{loaded:0,total:0,failed:0,missing:[]};const artTotal=REQUIRED_ASSET_KEYS.length;const artReadyCount=REQUIRED_ASSET_KEYS.filter(artReady).length;const artFailed=REQUIRED_ASSET_KEYS.filter(k=>art[k]?.complete&&!(art[k]?.naturalWidth>0)).length;const total=artTotal+(prod.total||0);const loaded=artReadyCount+(prod.loaded||0);const failed=artFailed+(prod.failed||0);return{loaded,total,failed,ready:total>0&&loaded>=total&&failed===0,missing:missingRequiredAssets(),errors:[...(window.__GAME_ERRORS__||[])]};};
+
 function ensureAssetsThenStart(diff="normal",fromSave=false){
   if(requiredAssetsReady()) return startGame(diff,fromSave,true);
   const started=performance.now();
