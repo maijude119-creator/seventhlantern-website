@@ -2936,7 +2936,7 @@ function update(dt){
     if(pressed.has("e")){const choice=ENDING_CHOICES[world.endingChoiceIndex];beginEpilogue(choice.id);}
     pressed.clear();released.clear();return;
   }
-  if(pressed.has("escape")){ state="paused"; showPanel(pausePanel); player.charging=false; pressed.clear(); released.clear(); return; }
+  if(pressed.has("escape")){ saveForSuspend();clearTransientInputState();state="paused";showPanel(pausePanel);return; }
   if(window.Motion)window.Motion.beforeUpdate(dt);
   if((player.interactCandidates?.length||0)>1){
     if(pressed.has("arrowup")||(!lampIsFocused()&&pressed.has("w")))cycleInteraction(-1);
@@ -4493,7 +4493,7 @@ window.addEventListener("keydown",e=>{
   else if(k==="e"&&state==="ending"){clearTransientInputState();state="menu";window.AudioManager?.stopEnvironment?.();sound.started=false;sound.ambienceRegion="";showPanel(menu);currentDialogue=null;dialogueEl.classList.remove("visible");}
 });
 window.addEventListener("keyup",e=>{const k=e.key.toLowerCase();keys[k]=false;released.add(k);if(k==="l"){lReleasedDuration=performance.now()-lHoldStart;lHoldStart=0;}});
-window.addEventListener("blur",()=>{clearTransientInputState();if(state==="playing"){state="paused";showPanel(pausePanel);}});
+window.addEventListener("blur",()=>{if(state==="playing"){saveForSuspend();clearTransientInputState();state="paused";showPanel(pausePanel);}else clearTransientInputState();});
 
 document.getElementById("startBtn").onclick=()=>{showPanel(difficultyPanel);};
 continueBtn.onclick=()=>ensureAssetsThenStart("normal",true);
@@ -4501,7 +4501,7 @@ document.getElementById("helpBtn").onclick=()=>showPanel(helpPanel);
 document.getElementById("helpClose").onclick=()=>showPanel(menu);
 document.getElementById("backBtn").onclick=()=>showPanel(menu);
 document.querySelectorAll("[data-difficulty]").forEach(b=>b.onclick=()=>ensureAssetsThenStart(b.dataset.difficulty));
-document.getElementById("resumeBtn").onclick=()=>{hidePanels();state="playing";lastTime=performance.now();fixedAccumulator=0;};
+document.getElementById("resumeBtn").onclick=()=>{clearTransientInputState();hidePanels();state="playing";lastTime=performance.now();fixedAccumulator=0;};
 document.getElementById("restartBtn").onclick=()=>{hidePanels();state="playing";respawn();};
 document.getElementById("quitBtn").onclick=()=>{if(world&&player&&!player.dead)saveGame({resumeRegion:world.currentRegion});clearTransientInputState();state="menu";window.AudioManager?.stopEnvironment?.();sound.started=false;sound.ambienceRegion="";showPanel(menu);};
 document.getElementById("fullscreen").onclick=()=>{if(!document.fullscreenElement)document.getElementById("app").requestFullscreen?.();else document.exitFullscreen?.();};
@@ -4513,8 +4513,15 @@ function clearTransientInputState(){
   jHoldStart=0;lHoldStart=0;lReleasedDuration=0;
   if(player){player.charging=false;player.chargeLevel=0;player.chargeCue=0;player.attackBuffer=0;player.attackBufferHeld=0;}
 }
-document.addEventListener("visibilitychange",()=>{if(document.hidden){clearTransientInputState();if(state==="playing"&&world&&player&&!player.dead)saveGame({resumeRegion:world.currentRegion});}});
-window.addEventListener("pagehide",()=>{clearTransientInputState();if(state==="playing"&&world&&player&&!player.dead)saveGame({resumeRegion:world.currentRegion});});
+function saveForSuspend(){
+  if((state==="playing"||state==="paused")&&world&&player&&!player.dead&&!world.epilogueActive&&state!=="ending"){
+    saveGame({resumeRegion:world.currentRegion});
+    return true;
+  }
+  return false;
+}
+document.addEventListener("visibilitychange",()=>{if(document.hidden){saveForSuspend();clearTransientInputState();}});
+window.addEventListener("pagehide",()=>{saveForSuspend();clearTransientInputState();});
 window.addEventListener("resize",resizeGameViewport);
 resizeGameViewport();
 buildWorld();resetPlayer();requestAnimationFrame(loop);
