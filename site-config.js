@@ -3,7 +3,7 @@
   author: "买橘的",
   version: "v1.0.0",
   webGameVersion: "v5.1.0",
-  siteBuild: "v1.8",
+  siteBuild: "v1.9",
   releaseDate: "2026.09.27",
   download: {
     url: "https://github.com/maijude119-creator/seventhlantern-website/releases/download/v1.0.0/SeventhLantern_v1.0.0_Windows.zip",
