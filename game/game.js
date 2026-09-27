@@ -53,8 +53,8 @@ const ECHO_ARCHIVE=[
   {id:"echo_opera_name",chapter:"无面戏楼",title:"反写戏名",text:"戏台写下“阿砚已经来过”，像是在记录上一周目。"},
   {id:"echo_bamboo_bell",chapter:"倒悬竹寺",title:"水下钟影",text:"水中出现不存在的第四口钟，只留下已经发生过一次的回声。"},
   {id:"echo_ferry_song",chapter:"逆流古渡",title:"船底童谣",text:"童谣唱着“回来的人，不算第一次上船”。"},
-  {id:"echo_city_backtext",chapter:"幽都纸城",title:"反面碑文",text:"碑背记着一个死过一次、又从开头回来的行人。"},
-  {id:"echo_final_name",chapter:"第七灯域",title:"镜后名字",text:"照魂镜第一次把“玩家”写进了无阴镇的记录。"}
+  {id:"echo_city_backtext",chapter:"幽都纸城",title:"反面碑文",text:"碑背记着一个死过一次、又从纸扎铺重新醒来的行人。"},
+  {id:"echo_final_name",chapter:"第七灯域",title:"镜后名字",text:"照魂镜第一次把“执灯人”写进了无阴镇的记录。"}
 ];
 function persistSettings(){
   try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(gameSettings));}catch(_e){}
@@ -91,7 +91,8 @@ function renderArchive(){
   const currentEcho=world?.chapterProgress?.story?.echoFinds||[];
   const echoFound=new Set([...(metaProgress.echoFinds||[]),...currentEcho]);
   const visited=new Set([...(metaProgress.visitedRegions||[]),...Object.keys(world?.visitedRegions||{}).filter(k=>world.visitedRegions[k])]);
-  const endingTotal=metaProgress.completed?4:3;
+  const secretKnown=(metaProgress.echoFinds||[]).length>0||(metaProgress.endings||[]).includes("remember");
+  const endingTotal=secretKnown?4:3;
   archiveSummary.innerHTML=`<span>旧事残片 ${found.size}/5</span><span>回响痕迹 ${echoFound.size}/5</span><span>到访区域 ${visited.size}</span><span>通关 ${metaProgress.completions||0} 次</span><span>结局 ${(metaProgress.endings||[]).length}/${endingTotal}</span><span>回响通关 ${metaProgress.echoClears||0} 次</span><span>最快通关 ${formatRunTime(metaProgress.bestClearMs)}</span><span>累计死亡 ${metaProgress.totalDeaths||0}</span>`;
   const endingNames={keep:"名字留下",return:"记忆归灯",extinguish:"第七盏灯熄灭",remember:"第七个人被记住"};
   const memories=MEMORY_ARCHIVE.map((m,i)=>found.has(m.id)?
@@ -100,14 +101,14 @@ function renderArchive(){
   const echoMemories=metaProgress.completed?ECHO_ARCHIVE.map((m,i)=>echoFound.has(m.id)?
     `<article class="archive-card found"><small>回响 · ${m.chapter}</small><b>${i+1}. ${m.title}</b><p>${m.text}</p><span class="archive-seal">回响</span></article>`:
     `<article class="archive-card locked"><small>回响 · ${m.chapter}</small><b>${i+1}. ？？？？</b><p>只有二周目举灯时才能看见。</p></article>`).join(""):"";
-  const endings=Object.entries(endingNames).filter(([id])=>id!=="remember"||metaProgress.completed).map(([id,name])=>metaProgress.endings.includes(id)?
+  const endings=Object.entries(endingNames).filter(([id])=>id!=="remember"||secretKnown).map(([id,name])=>metaProgress.endings.includes(id)?
     `<article class="archive-card found"><small>终局记录</small><b>${name}</b><p>这个选择已经被无阴镇记住。</p><span class="archive-seal">已见</span></article>`:
     `<article class="archive-card locked"><small>终局记录</small><b>？？？？</b><p>还有一种结局没有被你亲自走到。</p></article>`).join("");
   const echo=metaProgress.completed?(metaProgress.echoClears>0?
     `<article class="archive-card found"><small>二周目</small><b>回响已平息</b><p>你已经在回响模式中再次走完整座无阴镇。</p><span class="archive-seal">回响</span></article>`:
     `<article class="archive-card"><small>二周目</small><b>回响模式已解锁</b><p>更高敌人压力、更多战斗组合、无谜题失败提示。</p></article>`):"";
   const last=metaProgress.lastClear;
-  const lastCard=last?`<article class="archive-card found"><small>最近一次通关</small><b>${difficultyValues[last.difficulty]?.label||last.difficulty} · ${endingNames[last.ending]||"未知结局"}</b><p>用时 ${formatRunTime(last.playMs)}　死亡 ${last.deaths||0}　受击 ${last.hitsTaken||0}　旧事 ${last.memories||0}/5</p><span class="archive-seal">记录</span></article>`:"";
+  const lastCard=last?`<article class="archive-card found"><small>最近一次通关</small><b>${difficultyValues[last.difficulty]?.label||last.difficulty} · ${endingNames[last.ending]||"未知结局"}</b><p>用时 ${formatRunTime(last.playMs)}　死亡 ${last.deaths||0}　受击 ${last.hitsTaken||0}　旧事 ${last.memories||0}/5${last.difficulty==="echo"?`　回响 ${last.echoes||0}/5`:""}</p><span class="archive-seal">记录</span></article>`:"";
   archiveGrid.innerHTML=lastCard+memories+echoMemories+endings+echo;
 }
 persistSettings();refreshMetaButtons();
@@ -2069,7 +2070,7 @@ function collectEchoTrace(id,title,lines){
     if(story.echoFinds.length===3&&!story.echoLayerSeen){
       story.echoLayerSeen=true;
       const lastName={keep:"留下阿砚",return:"归还记忆",extinguish:"熄灭第七盏灯",remember:"记住第七个人"}[metaProgress.lastClear?.ending]||"一个已经做过的选择";
-      queueDialogue("回声夹层",["三处回响同时亮起，周围的雨声短暂倒放。",`你听见一个不属于这一周目的答案：『${lastName}。』`,"无阴镇没有重置。它只是让你从开头重新走了一遍。"]);
+      queueDialogue("回声夹层",["三处回响同时亮起，周围的雨声短暂倒放。",`你听见一个不属于这一周目的答案：『${lastName}。』`,"无阴镇没有忘记。它只是让你从最初那间纸扎铺重新醒来。"]);
       showGuidance("回声夹层","二周目正在记住你上一周目的选择。剩下两处回响会把这条线带到终章。","",4.8);
     }
   }
@@ -2259,7 +2260,7 @@ function handleChapterInteraction(obj){
       ];queueDialogue(obj.name,lines[obj.index]);break;
     }
     case "echo_city_backtext":
-      collectEchoTrace(obj.id,"反面碑文",["碑背原本什么都没有。举灯后却多出一道新刻痕：『此人死过一次，又从标题界面回来。』","最后几个字不是碑文，是像素边缘一样整齐的裂口。"]);break;
+      collectEchoTrace(obj.id,"反面碑文",["碑背原本什么都没有。举灯后却多出一道新刻痕：『此人死过一次，又从纸扎铺醒来。』","最后几个字的刀痕很新，像有人在你离开之后才补上。"]);break;
     case "city_paper_crane":
       collectMemoryFragment(obj.id,"压扁的纸鹤",["纸鹤翅膀内侧写着六个成人名字，笔画都很稳。","最里面还有一行孩子的字：『我叫阿——』，后半个字被折痕压掉了。"]);break;
     case "city_false_grave":{
@@ -2338,7 +2339,7 @@ function handleChapterInteraction(obj){
         "旁边留着四个几乎被擦掉的字：『影、声、名、位』。"
       ]);break;
     case "echo_final_name":
-      collectEchoTrace(obj.id,"镜后名字",["照魂镜背面藏着一个不是角色名字的词：『玩家』。","它下面写着：『第一次替阿砚选结局，第二次才轮到你自己回答。』"]);break;
+      collectEchoTrace(obj.id,"镜后名字",["照魂镜背面藏着一个不属于亡者的称呼：『执灯人』。","它下面写着：『第一次替阿砚选，第二次才轮到执灯的人回答。』"]);break;
     case "final_blank_tag":
       collectMemoryFragment(obj.id,"烧白的空名签",["名签被火烤得只剩纤维，没有旧名，也没有死亡年月。","边缘却有和纸扎铺旧照片完全一致的红线。它像是先有了一具替身，后来才等到一个名字。"]);break;
     case "final_dial":
@@ -2523,7 +2524,7 @@ function recordRunCompletion(){
   if(difficulty==="echo")metaProgress.echoClears=(metaProgress.echoClears||0)+1;
   metaProgress.totalDeaths=(metaProgress.totalDeaths||0)+(runStats.deaths||0);
   if(runStats.playMs>0&&(metaProgress.bestClearMs==null||runStats.playMs<metaProgress.bestClearMs))metaProgress.bestClearMs=Math.round(runStats.playMs);
-  metaProgress.lastClear={difficulty,ending:world.finalChoice||"",playMs:Math.round(runStats.playMs||0),deaths:runStats.deaths||0,hitsTaken:runStats.hitsTaken||0,memories:(world.chapterProgress?.story?.memoryFinds||[]).length,at:Date.now()};
+  metaProgress.lastClear={difficulty,ending:world.finalChoice||"",playMs:Math.round(runStats.playMs||0),deaths:runStats.deaths||0,hitsTaken:runStats.hitsTaken||0,memories:(world.chapterProgress?.story?.memoryFinds||[]).length,echoes:(world.chapterProgress?.story?.echoFinds||[]).length,at:Date.now()};
   persistMeta();
 }
 function beginEpilogue(choiceId){
@@ -4600,7 +4601,7 @@ function drawBossSealHUD(){
   if(!world.bossActive||!world.boss)return;const b=world.boss,l=hudLayout().boss,ratio=clamp((b.uiHp??b.hp)/b.maxHp,0,1);
   ctx.save();drawPaperTag(l.x,l.y,l.w,l.h,"rgba(218,205,170,.92)",b.voiceTrial?"#5b6d70":"#74332d");
   ctx.strokeStyle=b.voiceTrial?"#667b7e":"#9b342c";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(l.x+10,l.y+l.h*.62);ctx.lineTo(l.x+10+(l.w-20)*ratio,l.y+l.h*.62);ctx.stroke();
-  ctx.fillStyle=b.voiceTrial?"#4d6164":"#5b302c";ctx.textAlign="center";ctx.font="700 13px serif";ctx.fillText(`百口灯妖${b.voiceTrial?" · 虚相":""}`,l.x+l.w*.5,l.y+13);ctx.textAlign="left";ctx.restore();
+  ctx.fillStyle=b.voiceTrial?"#4d6164":"#5b302c";ctx.textAlign="center";ctx.font="700 13px serif";ctx.fillText(`百口灯妖${b.voiceTrial?" · 虚相":b.phase===4?" · 回响相":""}`,l.x+l.w*.5,l.y+13);ctx.textAlign="left";ctx.restore();
 }
 function interactionListWindow(maxItems=3){
   const list=player.interactCandidates||[],current=clamp(player.interactIndex||0,0,Math.max(0,list.length-1));
