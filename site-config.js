@@ -2,7 +2,7 @@
   title: "第7盏灯",
   author: "买橘的",
   version: "v1.0.0",
-  siteBuild: "v1.6",
+  siteBuild: "v1.7",
   releaseDate: "2026.09.27",
   download: {
     url: "https://github.com/maijude119-creator/seventhlantern-website/releases/download/v1.0.0/SeventhLantern_v1.0.0_Windows.zip",
