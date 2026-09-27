@@ -69,6 +69,11 @@
     const show=()=>{const img=card.querySelector('img');openLightbox(img?.src||'',card.querySelector('h3')?.textContent||'',img?.alt||'游戏画面')};
     card.addEventListener('click',show);card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();show()}});
   });
+  document.querySelectorAll('.cast-card').forEach(card=>{
+    card.tabIndex=0;card.setAttribute('role','button');card.setAttribute('aria-label','查看角色 '+(card.querySelector('h3')?.textContent||''));
+    const show=()=>{const img=card.querySelector('img');const title=card.querySelector('h3')?.textContent||'';const text=card.querySelector('p')?.textContent||'';openLightbox(img?.src||'',title+(text?' · '+text:''),img?.alt||title)};
+    card.addEventListener('click',show);card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();show()}});
+  });
   document.querySelector('.preview-frame')?.addEventListener('click',e=>{if(e.target.closest('a'))return;location.href='/play'});
   document.getElementById('lightboxClose')?.addEventListener('click',closeLightbox);
   document.getElementById('lightboxBackdrop')?.addEventListener('click',closeLightbox);
