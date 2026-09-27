@@ -2042,9 +2042,44 @@ function collectMemoryFragment(id,title,lines){
   }
   saveGame({resumeRegion:world.currentRegion});
 }
+function collectEchoTrace(id,title,lines){
+  if(difficulty!=="echo")return false;
+  const story=world.chapterProgress.story;
+  story.echoFinds||(story.echoFinds=[]);
+  const first=!story.echoFinds.includes(id);
+  if(first){
+    story.echoFinds.push(id);sound.play("story_ghost",{volume:.18,rate:.88});sound.lantern("unstable");
+    showToast(`回响痕迹 ${story.echoFinds.length}/5`,2.6);
+  }
+  queueDialogue(title,lines);
+  if(first&&story.echoFinds.length>=5&&!story.echoCompleteSeen){
+    story.echoCompleteSeen=true;story.echoTruthUnlocked=true;
+    queueDialogue("阿砚",["这些不是第一次留下的痕迹。","有人走过和我一样的路，做过和我一样的选择。"]);
+    queueDialogue("无名客",["不是别人。是无阴镇记得你上一次怎么离开。"]);
+    showGuidance("回响真相","五处回响已经拼合。终章会出现一条一周目看不到的选择。","",4.6);
+  }
+  saveGame({resumeRegion:world.currentRegion});return true;
+}
+function echoNpcDialogue(obj){
+  if(difficulty!=="echo"||obj.kind!=="npc")return false;
+  const story=world.chapterProgress.story;story.echoNpcSeen||(story.echoNpcSeen=[]);
+  if(story.echoNpcSeen.includes(obj.id))return false;
+  const found=story.echoFinds||[];
+  const linesById={
+    shenpo_opera:["你这次看我的眼神不一样。","上一次你来时，我把最重要的话咽了回去。镇子也记得。"],
+    nameless_bamboo:["钟声没有变。变的是你已经听过一次。","第二次还愿意回头看，才算真的看见。"],
+    umbrella_ferry:["我记得你上一次没有回头。","可船记得。水也记得。这里很多东西比人更会记仇。"],
+    shenpo_city:["纸城最怕第二次来的人。","第一次它骗你，第二次你会开始看见它删掉了什么。"],
+    nameless_final:["你终于带着两次路程站到这里。","如果五处回响都被你照出来，第七盏灯会多问你一句。"]
+  };
+  const lines=linesById[obj.id];if(!lines)return false;
+  const needed={shenpo_opera:0,nameless_bamboo:1,umbrella_ferry:2,shenpo_city:3,nameless_final:4}[obj.id]??0;
+  if(found.length<needed)return false;
+  story.echoNpcSeen.push(obj.id);queueDialogue(obj.name,lines);saveGame({resumeRegion:world.currentRegion});return true;
+}
 function handleChapterInteraction(obj){
   const p=world.chapterProgress[obj.chapter];if(!p)return;
-  if(obj.kind==="npc")stageNpcConversation(obj,92);
+  if(obj.kind==="npc"){stageNpcConversation(obj,92);if(echoNpcDialogue(obj))return;}
   // Narrative rule: NPC dialogue is optional. Core props and mechanisms never
   // require p.talked; the player can discover -> infer -> operate from evidence alone.
   switch(obj.id){
@@ -2090,6 +2125,8 @@ function handleChapterInteraction(obj){
         "高锣的红绳系在『人』面背后；最低的锣沿沾着『天』面脱落的金粉。",
         "剩下那张『地』面没有自己的锣绳。三张脸正面却被刮成了同一张脸。"
       ]);break;
+    case "echo_opera_name":
+      collectEchoTrace(obj.id,"反写戏名",["戏台背板上浮出一行一周目从未出现的墨：『阿砚已经来过。』","下面还有更淡的一句：『他第一次没有看见我。』"]);break;
     case "opera_false_bill":
       queueDialogue("旧排练单",["潦草抄着『高、低、中』，旁边又被人重重划掉。","纸背写着：『正角沈月娥病缺，替角排练用，不入正戏。』——这个名字被朱砂圈了两遍。"]);break;
     case "opera_burned_ticket":
@@ -2116,6 +2153,8 @@ function handleChapterInteraction(obj){
         "墨字从下往上：『近者受落地之光，远者逐升起之火；居中者只听平直一线。』",
         "签尾有六个香客名字，第七格被整齐割掉。"
       ]);break;
+    case "echo_bamboo_bell":
+      collectEchoTrace(obj.id,"水下钟影",["积水里不是三口钟，而是四道倒影。","第四道没有钟身，只有一次已经发生过的回声。"]);break;
     case "bamboo_incense_book":
       collectMemoryFragment(obj.id,"残破香火簿",["香火簿按年份记着六个固定名字。第七行每年都换一种笔迹，却从不写姓名。","最近一次只留下一句：『孩子怕水，不要让他听第三遍钟。』"]);break;
     case "bamboo_pool":{
@@ -2170,6 +2209,8 @@ function handleChapterInteraction(obj){
       if(!world.ritualBladeUnlocked&&player.weapon?.type!=="ritual"){showToast("普通工具割不开替身纸线。戏楼里那把祭刃或许正是为它留下的");break;}
       p.debrisCleared=true;sound.play("ritual_cut_paper",{volume:.48});createBurst(obj.x,555,"#b59b70",18);queueDialogue("缠绳船骸",["祭刃割断的不是麻绳，而是一束束写着姓名的纸线。","船板抬起后，下面压着第三张名签。"]);break;
     }
+    case "echo_ferry_song":
+      collectEchoTrace(obj.id,"船底童谣",["木板下面有人反复唱同一句：『回来的人，不算第一次上船。』","唱到第七遍时，声音变成了你自己的。"]);break;
     case "ferry_manifest":
       queueDialogue("渡船旧册",["旧册每页都只有六个姓名栏，但页角都多出一道没有编号的水痕。","有人用不同年份的墨反复写过：『别数最后一个。』"]);break;
     case "ferry_child_ticket":
@@ -2195,6 +2236,8 @@ function handleChapterInteraction(obj){
         ["归乡者碑：『离乡七年，逆水而归。我停在老者另一侧，却永远碰不到那个孩子。』"]
       ];queueDialogue(obj.name,lines[obj.index]);break;
     }
+    case "echo_city_backtext":
+      collectEchoTrace(obj.id,"反面碑文",["碑背原本什么都没有。举灯后却多出一道新刻痕：『此人死过一次，又从标题界面回来。』","最后几个字不是碑文，是像素边缘一样整齐的裂口。"]);break;
     case "city_paper_crane":
       collectMemoryFragment(obj.id,"压扁的纸鹤",["纸鹤翅膀内侧写着六个成人名字，笔画都很稳。","最里面还有一行孩子的字：『我叫阿——』，后半个字被折痕压掉了。"]);break;
     case "city_false_grave":{
@@ -2272,6 +2315,8 @@ function handleChapterInteraction(obj){
         "六道刻痕都有被供奉过的磨损，只有最后一道像是后来硬挤进去的空位。",
         "旁边留着四个几乎被擦掉的字：『影、声、名、位』。"
       ]);break;
+    case "echo_final_name":
+      collectEchoTrace(obj.id,"镜后名字",["照魂镜背面藏着一个不是角色名字的词：『玩家』。","它下面写着：『第一次替阿砚选结局，第二次才轮到你自己回答。』"]);break;
     case "final_blank_tag":
       collectMemoryFragment(obj.id,"烧白的空名签",["名签被火烤得只剩纤维，没有旧名，也没有死亡年月。","边缘却有和纸扎铺旧照片完全一致的红线。它像是先有了一具替身，后来才等到一个名字。"]);break;
     case "final_dial":
