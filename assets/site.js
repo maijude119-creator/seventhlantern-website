@@ -3,6 +3,14 @@
   document.querySelectorAll('[data-version]').forEach(el=>el.textContent=cfg.version||'v1.0.0');
   const header=document.querySelector('.site-header');
   if(header) addEventListener('scroll',()=>header.classList.toggle('scrolled',scrollY>36),{passive:true});
+  document.querySelectorAll('[data-site-build]').forEach(el=>el.textContent=cfg.siteBuild||'v1.6');
+  const menuToggle=document.getElementById('menuToggle');
+  const mainNav=document.getElementById('mainNav');
+  if(menuToggle&&mainNav){
+    const closeMenu=()=>{mainNav.classList.remove('open');menuToggle.classList.remove('open');menuToggle.setAttribute('aria-expanded','false')};
+    menuToggle.addEventListener('click',()=>{const open=!mainNav.classList.contains('open');mainNav.classList.toggle('open',open);menuToggle.classList.toggle('open',open);menuToggle.setAttribute('aria-expanded',String(open))});
+    mainNav.querySelectorAll('a').forEach(a=>a.addEventListener('click',closeMenu));
+  }
 
   const intro=document.getElementById('intro');
   if(intro){
@@ -19,10 +27,19 @@
     const cards=[...worldTrack.children];cards.forEach((_,i)=>{const b=document.createElement('button');b.setAttribute('aria-label',`场景 ${i+1}`);b.onclick=()=>cards[i].scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});dots.appendChild(b)});
   }
 
+  const lightbox=document.getElementById('mediaLightbox');
+  const lightboxImage=document.getElementById('lightboxImage');
+  const lightboxCaption=document.getElementById('lightboxCaption');
+  const closeLightbox=()=>{if(!lightbox)return;lightbox.classList.remove('open');lightbox.setAttribute('aria-hidden','true');document.body.classList.remove('lightbox-open')};
+  document.querySelectorAll('.media-shot').forEach(btn=>btn.addEventListener('click',()=>{if(!lightbox||!lightboxImage)return;lightboxImage.src=btn.dataset.full||btn.querySelector('img')?.src||'';lightboxImage.alt=btn.querySelector('img')?.alt||'游戏画面';if(lightboxCaption)lightboxCaption.textContent=btn.dataset.caption||'';lightbox.classList.add('open');lightbox.setAttribute('aria-hidden','false');document.body.classList.add('lightbox-open')}));
+  document.getElementById('lightboxClose')?.addEventListener('click',closeLightbox);
+  document.getElementById('lightboxBackdrop')?.addEventListener('click',closeLightbox);
+  addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox()});
+
   const socials=document.getElementById('socialRow');
   if(socials){
     const labels={douyin:'抖音',bilibili:'B站',xiaohongshu:'小红书',github:'GitHub'};
-    Object.entries(labels).forEach(([k,label])=>{const a=document.createElement(cfg.socials?.[k]?'a':'span');a.className='social-pill'+(cfg.socials?.[k]?' enabled':'');a.textContent=label+(cfg.socials?.[k]?'':' · 待填写');if(cfg.socials?.[k]){a.href=cfg.socials[k];a.target='_blank';a.rel='noopener'}socials.appendChild(a)});
+    Object.entries(labels).forEach(([k,label])=>{if(!cfg.socials?.[k])return;const a=document.createElement('a');a.className='social-pill enabled';a.textContent=label;a.href=cfg.socials[k];a.target='_blank';a.rel='noopener';socials.appendChild(a)});
   }
 
   const sb=cfg.supabase||{};
