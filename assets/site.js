@@ -1,4 +1,8 @@
 (() => {
+  const safeStorage={
+    get(store,key){try{return window[store]?.getItem(key)||null}catch(_e){return null}},
+    set(store,key,val){try{window[store]?.setItem(key,val);return true}catch(_e){return false}}
+  };
   const cfg=window.SEVENTH_LANTERN_CONFIG||{};
   document.querySelectorAll('[data-version]').forEach(el=>el.textContent=cfg.version||'v1.0.0');
   document.querySelectorAll('[data-web-version]').forEach(el=>el.textContent=cfg.webGameVersion||cfg.version||'v1.0.0');
@@ -26,24 +30,46 @@
 
   const intro=document.getElementById('intro');
   if(intro){
-    const close=()=>{intro.classList.add('hide');sessionStorage.setItem('seventh-intro','1')};
+    let closed=false;
+    const close=()=>{if(closed)return;closed=true;intro.classList.add('hide');safeStorage.set('sessionStorage','seventh-intro','1');setTimeout(()=>intro.remove(),850)};
     document.getElementById('skipIntro')?.addEventListener('click',close);
-    if(sessionStorage.getItem('seventh-intro')) intro.classList.add('hide'); else setTimeout(close,3200);
+    if(safeStorage.get('sessionStorage','seventh-intro')) close(); else setTimeout(close,2200);
+    setTimeout(()=>{if(document.body.contains(intro))close()},4500);
   }
 
-  const io=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');io.unobserve(e.target)}}),{threshold:.12});
-  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  const revealEls=[...document.querySelectorAll('.reveal')];
+  if('IntersectionObserver' in window){
+    revealEls.forEach(el=>el.classList.add('reveal-armed'));
+    const io=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.remove('reveal-armed');e.target.classList.add('visible');io.unobserve(e.target)}}),{threshold:.08,rootMargin:'0px 0px -30px 0px'});
+    revealEls.forEach(el=>io.observe(el));
+    setTimeout(()=>revealEls.forEach(el=>{if(!el.classList.contains('visible')){el.classList.remove('reveal-armed');el.classList.add('visible')}}),3500);
+  }else revealEls.forEach(el=>el.classList.add('visible'));
 
   const worldTrack=document.getElementById('worldTrack'),dots=document.getElementById('worldDots');
   if(worldTrack&&dots){
-    const cards=[...worldTrack.children];cards.forEach((_,i)=>{const b=document.createElement('button');b.setAttribute('aria-label',`场景 ${i+1}`);b.onclick=()=>cards[i].scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});dots.appendChild(b)});
+    const cards=[...worldTrack.children];
+    const activate=i=>{cards.forEach((c,n)=>c.classList.toggle('active',n===i));[...dots.children].forEach((d,n)=>d.classList.toggle('active',n===i));cards[i]?.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'})};
+    cards.forEach((card,i)=>{
+      card.tabIndex=0;card.setAttribute('role','button');card.setAttribute('aria-label','查看'+(card.dataset.name||('场景 '+(i+1))));
+      card.addEventListener('click',()=>activate(i));
+      card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activate(i)}});
+      const b=document.createElement('button');b.type='button';b.setAttribute('aria-label',`查看场景 ${i+1}`);b.onclick=e=>{e.stopPropagation();activate(i)};dots.appendChild(b);
+    });
+    dots.firstElementChild?.classList.add('active');
   }
 
   const lightbox=document.getElementById('mediaLightbox');
   const lightboxImage=document.getElementById('lightboxImage');
   const lightboxCaption=document.getElementById('lightboxCaption');
   const closeLightbox=()=>{if(!lightbox)return;lightbox.classList.remove('open');lightbox.setAttribute('aria-hidden','true');document.body.classList.remove('lightbox-open')};
-  document.querySelectorAll('.media-shot').forEach(btn=>btn.addEventListener('click',()=>{if(!lightbox||!lightboxImage)return;lightboxImage.src=btn.dataset.full||btn.querySelector('img')?.src||'';lightboxImage.alt=btn.querySelector('img')?.alt||'游戏画面';if(lightboxCaption)lightboxCaption.textContent=btn.dataset.caption||'';lightbox.classList.add('open');lightbox.setAttribute('aria-hidden','false');document.body.classList.add('lightbox-open')}));
+  const openLightbox=(src,caption='',alt='游戏画面')=>{if(!lightbox||!lightboxImage||!src)return;lightboxImage.src=src;lightboxImage.alt=alt;if(lightboxCaption)lightboxCaption.textContent=caption;lightbox.classList.add('open');lightbox.setAttribute('aria-hidden','false');document.body.classList.add('lightbox-open')};
+  document.querySelectorAll('.media-shot').forEach(btn=>btn.addEventListener('click',()=>openLightbox(btn.dataset.full||btn.querySelector('img')?.src||'',btn.dataset.caption||'',btn.querySelector('img')?.alt||'游戏画面')));
+  document.querySelectorAll('.feature-card').forEach(card=>{
+    card.tabIndex=0;card.setAttribute('role','button');card.setAttribute('aria-label','放大查看'+(card.querySelector('h3')?.textContent||'游戏画面'));
+    const show=()=>{const img=card.querySelector('img');openLightbox(img?.src||'',card.querySelector('h3')?.textContent||'',img?.alt||'游戏画面')};
+    card.addEventListener('click',show);card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();show()}});
+  });
+  document.querySelector('.preview-frame')?.addEventListener('click',e=>{if(e.target.closest('a'))return;location.href='/play'});
   document.getElementById('lightboxClose')?.addEventListener('click',closeLightbox);
   document.getElementById('lightboxBackdrop')?.addEventListener('click',closeLightbox);
   addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox()});
@@ -157,8 +183,8 @@
 
   const welcome=document.getElementById('playWelcome');
   if(welcome){
-    if(localStorage.getItem('seventh-play-welcome')==='1') welcome.classList.add('hidden');
-    document.getElementById('enterGame')?.addEventListener('click',()=>{localStorage.setItem('seventh-play-welcome','1');welcome.classList.add('hidden');try{document.getElementById('gameFrame')?.contentWindow?.focus()}catch(_){}});
+    if(safeStorage.get('localStorage','seventh-play-welcome')==='1') welcome.classList.add('hidden');
+    document.getElementById('enterGame')?.addEventListener('click',()=>{safeStorage.set('localStorage','seventh-play-welcome','1');welcome.classList.add('hidden');try{document.getElementById('gameFrame')?.contentWindow?.focus()}catch(_){}});
   }
 
   const frame=document.getElementById('gameFrame');
