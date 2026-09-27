@@ -14,7 +14,7 @@
   <link rel="icon" href="assets/images/favicon.png" />
   <link rel="stylesheet" href="assets/site.css" />
 </head>
-<body data-page="home">
+<body data-page="home"><div class="page-progress" aria-hidden="true"><i id="pageProgressBar"></i></div>
   <div id="intro" class="intro" aria-hidden="true">
     <div class="intro-rain"></div>
     <div class="intro-lantern" aria-hidden="true"><span></span></div>
@@ -38,10 +38,11 @@
 
   <main>
     <section class="hero" id="top">
-      <div class="hero-bg"></div>
+      <div class="hero-bg"></div><div class="hero-fog"></div><div class="hero-lantern-glow"></div>
       <div class="hero-grain"></div>
       <div class="hero-copy reveal">
         <p class="eyebrow">中式怪谈 · 横版剧情解谜</p>
+        <p class="hero-en">THE SEVENTH LANTERN</p>
         <div class="release-status"><span class="live-dot"></span><strong>正式开放</strong><span data-version>v1.0.0</span><span>Windows + Web</span></div>
         <h1><span>第</span><em>7</em><span>盏灯</span></h1>
         <h2>六盏灯灭后，<strong>第七盏灯</strong>为何还亮着？</h2>
@@ -51,8 +52,16 @@
           <a class="button secondary" href="/download"><span>下载游戏</span><small>Windows / Web</small></a>
         </div>
         <div class="meta-line"><span>版本 <b data-version>v1.0.0</b></span><i></i><span>作者 买橘的</span><i></i><span>独立游戏</span></div>
+        <div class="hero-facts"><span>单人剧情</span><span>键盘操作</span><span>Web / Windows</span><span>本地存档</span></div>
       </div>
-      <a class="scroll-hint" href="#gameplay"><span></span>向下探索</a>
+      <aside class="hero-rail" aria-hidden="true">
+        <span class="rail-index">07</span>
+        <i></i>
+        <span class="rail-copy">无阴镇 · 雨夜 · 纸城 · 灯域</span>
+        <small>WUYIN TOWN</small>
+      </aside>
+      <div class="hero-stamp" aria-hidden="true"><b>柒</b><span>灯未灭</span></div>
+      <a class="scroll-hint" href="#story"><span></span>向下探索</a>
     </section>
 
     <section class="quick-strip" aria-label="游戏快速信息">
