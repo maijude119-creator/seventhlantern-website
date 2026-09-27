@@ -131,15 +131,15 @@
       <div class="community-grid">
         <div class="feedback-panel reveal">
           <p class="eyebrow">FEEDBACK</p><h2>把问题直接留给<span>买橘的</span></h2><p>不公开私人联系方式。你可以直接提交Bug、操作问题、剧情反馈或建议。</p>
-          <form id="feedbackForm">
-            <label>反馈类型<select name="type"><option>Bug / 卡关</option><option>操作手感</option><option>剧情 / 解谜</option><option>画面 / 音效</option><option>其他建议</option></select></label>
-            <label>你的反馈<textarea name="message" maxlength="800" placeholder="例如：我在倒悬竹寺第三钟之后不知道下一步要回到水面……" required></textarea></label>
-            <button class="button primary compact" type="submit">提交反馈</button><p class="form-note" id="feedbackNote">第一版为本地演示，部署后可接入真实反馈数据库。</p>
-          </form>
+          <div class="feedback-actions">
+            <a class="button primary compact" href="https://github.com/maijude119-creator/seventhlantern-website/issues/new?template=bug-report.yml" target="_blank" rel="noopener">提交公开 Bug</a>
+            <button class="button secondary compact" type="button" id="privateFeedbackButton">私密反馈</button>
+          </div>
+          <p class="form-note" id="feedbackNote">公开 Bug 会进入 GitHub Issue，适合卡关、操作、画面与兼容性问题；私密反馈后台还未接入，因此不会伪装保存。</p>
         </div>
         <div class="guestbook-panel reveal">
           <div class="guestbook-head"><div><p class="eyebrow">MESSAGE WALL</p><h2>无阴镇留言墙</h2></div><span>公开留言</span></div>
-          <form id="guestbookForm"><input name="name" maxlength="16" placeholder="你的名字" /><textarea name="message" maxlength="160" placeholder="留一句话给后来的人……" required></textarea><button type="submit">留下纸签</button></form>
+          <div class="guestbook-livebar"><span id="guestbookStatus">正在读取线上纸签……</span><a href="https://github.com/maijude119-creator/seventhlantern-website/issues/new?template=guestbook.yml" target="_blank" rel="noopener">留下纸签</a></div>
           <div class="messages" id="messages"></div>
         </div>
       </div>
