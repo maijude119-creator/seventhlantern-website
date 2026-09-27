@@ -1,40 +1,10 @@
 {
-  "name": "seventh-lantern",
-  "version": "5.1.0",
+  "name": "seventh-lantern-official-site",
+  "version": "1.0.0",
   "private": true,
-  "description": "《第7盏灯》- 买橘的",
-  "main": "desktop/main.cjs",
+  "description": "《第7盏灯》官方网站 - 买橘的",
   "scripts": {
     "dev": "vercel dev",
-    "deploy": "vercel --prod",
-    "desktop:dir": "electron-builder --win dir --x64"
-  },
-  "devDependencies": {
-    "electron": "^38.1.2",
-    "electron-builder": "^26.0.12"
-  },
-  "build": {
-    "appId": "com.maijude.seventhlantern",
-    "productName": "第7盏灯",
-    "asar": false,
-    "files": [
-      "game/**/*",
-      "desktop/**/*",
-      "package.json"
-    ],
-    "directories": {
-      "output": "dist"
-    },
-    "win": {
-      "target": [
-        {
-          "target": "dir",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "executableName": "SeventhLantern"
-    }
+    "deploy": "vercel --prod"
   }
 }
