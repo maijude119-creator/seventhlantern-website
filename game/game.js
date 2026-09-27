@@ -405,6 +405,7 @@ const CHAPTER_INTERACTABLES=[
   {id:"shenpo_opera",chapter:"opera",kind:"npc",x:7580,y:610,sprite:"npcShenPo",npcType:"shenpo",name:"沈婆"},
   {id:"opera_mask_a",chapter:"opera",kind:"clue",x:7900,y:545,name:"残缺戏单"},
   {id:"opera_false_bill",chapter:"opera",kind:"flavor",x:8180,y:548,name:"旧排练单"},
+  {id:"opera_burned_ticket",chapter:"opera",kind:"flavor",x:8385,y:548,name:"焦边戏票"},
   {id:"opera_mask_b",chapter:"opera",kind:"clue",x:9580,y:420,name:"楼座无面具架"},
   {id:"opera_gong_0",chapter:"opera",kind:"gong",index:0,x:8500,y:610,name:"低锣"},
   {id:"opera_gong_1",chapter:"opera",kind:"gong",index:1,x:8790,y:610,name:"中锣"},
@@ -413,6 +414,7 @@ const CHAPTER_INTERACTABLES=[
   {id:"nameless_bamboo",chapter:"bamboo",kind:"npc",x:10070,y:610,sprite:"npcNameless",npcType:"nameless",name:"无名客"},
   {id:"bamboo_prayer",chapter:"bamboo",kind:"clue",x:10410,y:548,name:"倒写祈愿签"},
   {id:"bamboo_pool",chapter:"bamboo",kind:"clue",x:10730,y:560,name:"积水倒影"},
+  {id:"bamboo_incense_book",chapter:"bamboo",kind:"flavor",x:10920,y:548,name:"残破香火簿"},
   {id:"bamboo_bell_0",chapter:"bamboo",kind:"bell",index:0,x:11100,y:520,name:"近钟"},
   {id:"bamboo_bell_1",chapter:"bamboo",kind:"bell",index:1,x:11410,y:500,name:"中钟"},
   {id:"bamboo_bell_2",chapter:"bamboo",kind:"bell",index:2,x:11720,y:475,name:"远钟"},
@@ -424,6 +426,7 @@ const CHAPTER_INTERACTABLES=[
   {id:"ferry_debris",chapter:"ferry",kind:"debris",x:13950,y:575,name:"缠绳船骸"},
   {id:"ferry_name_2",chapter:"ferry",kind:"nameSlip",index:2,x:14010,y:558,name:"无字名签",propMount:"wreckEdge",anchorDx:0,anchorDy:-1},
   {id:"ferry_manifest",chapter:"ferry",kind:"flavor",x:14200,y:550,name:"渡船旧册"},
+  {id:"ferry_child_ticket",chapter:"ferry",kind:"flavor",x:14435,y:550,name:"儿童船票"},
   {id:"ferry_winch",chapter:"ferry",kind:"winch",x:14360,y:610,name:"渡口绞盘"},
   {id:"shenpo_city",chapter:"city",kind:"npc",x:14980,y:610,sprite:"npcShenPo",npcType:"shenpo",name:"沈婆"},
   {id:"lantern_girl_city",chapter:"story",kind:"npc",x:16330,y:610,sprite:"npcLanternGirlIdle",npcType:"girl",name:"？？？"},
@@ -431,6 +434,7 @@ const CHAPTER_INTERACTABLES=[
   {id:"city_grave_1",chapter:"city",kind:"epitaph",index:1,x:15770,y:560,name:"老者墓碑"},
   {id:"city_grave_2",chapter:"city",kind:"epitaph",index:2,x:16180,y:560,name:"归乡者墓碑"},
   {id:"city_false_grave",chapter:"city",kind:"emptyGrave",x:16340,y:560,name:"第七空坟"},
+  {id:"city_paper_crane",chapter:"city",kind:"flavor",x:16255,y:548,name:"压扁的纸鹤"},
   {id:"city_memory_0",chapter:"city",kind:"memoryToken",index:0,x:16425,y:575,name:"幼者纸拓",propMount:"graveStone",anchorDx:0,anchorDy:-4},
   {id:"city_memory_1",chapter:"city",kind:"memoryToken",index:1,x:16505,y:575,name:"老者纸拓",propMount:"groundPaper",anchorDx:0,anchorDy:0},
   {id:"city_memory_2",chapter:"city",kind:"memoryToken",index:2,x:16585,y:575,name:"归乡纸拓",propMount:"stoneStep",anchorDx:0,anchorDy:-3},
@@ -443,6 +447,7 @@ const CHAPTER_INTERACTABLES=[
   {id:"final_echo_1",chapter:"final",kind:"echo",index:1,x:18220,y:610,name:"中回声"},
   {id:"final_echo_2",chapter:"final",kind:"echo",index:2,x:18340,y:610,name:"高回声"},
   {id:"final_inscription",chapter:"final",kind:"clue",x:18450,y:552,name:"第七刻痕"},
+  {id:"final_blank_tag",chapter:"final",kind:"flavor",x:18635,y:548,name:"烧白的空名签"},
   {id:"final_dial",chapter:"final",kind:"dial",x:18570,y:610,name:"七相转盘"},
   {id:"final_name_tablet",chapter:"final",kind:"nameTablet",x:18700,y:610,name:"归名牌"},
   {id:"final_crystal",chapter:"final",kind:"crystal",x:18910,y:610,name:"忆火晶石"},
@@ -490,7 +495,7 @@ function npcVisualFor(obj){
 
 function freshChapterProgress(){
   return {
-    story:{umbrellaRainTalked:false,umbrellaRainDeparting:false,umbrellaRainGone:false,umbrellaFerryTalked:false,umbrellaFerryGone:false,operaSingerIntroSeen:false,operaSingerClueSeen:false,operaSingerFarewellSeen:false,girlRainSeen:false,girlBossSeen:false,girlOperaSeen:false,girlBambooSeen:false,girlBambooHintSeen:false,girlFerrySeen:false,girlFerryHintSeen:false,girlCityTalked:false,girlCityDeparting:false,girlCityGone:false,girlCityHintSeen:false,girlFinalSeen:false},
+    story:{umbrellaRainTalked:false,umbrellaRainDeparting:false,umbrellaRainGone:false,umbrellaFerryTalked:false,umbrellaFerryGone:false,operaSingerIntroSeen:false,operaSingerClueSeen:false,operaSingerFarewellSeen:false,girlRainSeen:false,girlBossSeen:false,girlOperaSeen:false,girlBambooSeen:false,girlBambooHintSeen:false,girlFerrySeen:false,girlFerryHintSeen:false,girlCityTalked:false,girlCityDeparting:false,girlCityGone:false,girlCityHintSeen:false,girlFinalSeen:false,memoryFinds:[],memoryCompleteSeen:false},
     opera:{talked:false,clues:[],sequence:[],wrongAttempts:0,solved:false,liftRaised:false,liftProgress:0},
     bamboo:{talked:false,clues:[],tuned:[],wrongAttempts:0,reflectionSealed:false,solved:false},
     ferry:{talked:false,names:[],reflectionRevealed:false,debrisCleared:false,winchTurns:0,wrongAttempts:0,solved:false,boatProgress:0},
@@ -505,7 +510,7 @@ function mergeChapterProgress(saved){
   if(!saved||typeof saved!=="object")return base;
   for(const id of Object.keys(base)){
     if(saved[id]&&typeof saved[id]==="object")Object.assign(base[id],saved[id]);
-    for(const key of ["clues","sequence","names","epitaphs","tuned","assignments","echoSequence"]){
+    for(const key of ["clues","sequence","names","epitaphs","tuned","assignments","echoSequence","memoryFinds"]){
       if(key in base[id]&&!Array.isArray(base[id][key]))base[id][key]=[];
     }
     if(id==="city"){
@@ -600,7 +605,17 @@ function restoreChapterRuntime(){
 }
 
 const SAVE_KEY="seventhLanternSave";
-const SAVE_VERSION=3;
+const SAVE_BACKUP_KEY="seventhLanternSaveBackup";
+const SAVE_VERSION=4;
+function parseSave(raw){try{const s=JSON.parse(raw);return s&&typeof s==="object"&&Number.isFinite(s.savedAt)?s:null}catch(_e){return null}}
+function loadBestSave(){
+  try{
+    const primary=parseSave(localStorage.getItem(SAVE_KEY));
+    const backup=parseSave(localStorage.getItem(SAVE_BACKUP_KEY));
+    if(primary&&backup)return primary.savedAt>=backup.savedAt?primary:backup;
+    return primary||backup||null;
+  }catch(_e){return null}
+}
 const REGION_RESUME_POINTS={
   paperShop:{x:270,y:538},alleyA:{x:1240,y:538},alleyB:{x:2940,y:538},
   alleyC:{x:4580,y:538},bossArena:{x:5740,y:538},opera:{x:7420,y:538},
@@ -1093,7 +1108,7 @@ function startGame(diff="normal", fromSave=false, assetsConfirmed=false){
   hidePanels(); state="playing";
   if(fromSave){
     try{
-      const save=JSON.parse(localStorage.getItem(SAVE_KEY));
+      const save=loadBestSave();
       if(save){
         difficulty=save.difficulty||diff; buildWorld();
         let savedRegion=save.currentRegion||sceneRegionAt(save.checkpointX??save.x??220).id;
@@ -1162,7 +1177,13 @@ function saveGame(options={}){
     lanternsRecovered:world.lanternsRecovered,currentRegion:resumeRegion,
     chapterProgress:world.chapterProgress,ritualBladeUnlocked:world.ritualBladeUnlocked,
     visitedRegions:Object.keys(world.visitedRegions).filter(k=>world.visitedRegions[k]),clueReactionSeen:Object.keys(world.clueReactionSeen||{}).filter(k=>world.clueReactionSeen[k]),npcRevealSeen:Object.keys(world.npcRevealSeen||{}).filter(k=>world.npcRevealSeen[k]),tutorialFlags:{...world.tutorialFlags}};
-  try{localStorage.setItem(SAVE_KEY,JSON.stringify(data)); continueBtn.classList.remove("hidden");}catch(_e){}
+  try{
+    const payload=JSON.stringify(data);
+    const previous=localStorage.getItem(SAVE_KEY);
+    if(parseSave(previous))localStorage.setItem(SAVE_BACKUP_KEY,previous);
+    localStorage.setItem(SAVE_KEY,payload);
+    continueBtn.classList.remove("hidden");
+  }catch(_e){}
 }
 
 function hidePanels(){ document.querySelectorAll(".panel").forEach(p=>p.classList.remove("visible")); }
@@ -1182,7 +1203,7 @@ function dialoguePortraitKind(speaker){
   if(dialoguePortraitAsset(speaker))return "character";
   if(speaker==="旁白")return "narrator";
   if(/倒影|水面|照魂镜|镜面/.test(speaker))return "reflection";
-  if(/戏单|排练单|祈愿签|旧册|碑|刻痕|归名牌|纸拓|照片|字迹|名签/.test(speaker))return "document";
+  if(/戏单|排练单|戏票|香火簿|船票|纸鹤|祈愿签|旧册|碑|刻痕|归名牌|纸拓|照片|字迹|名签/.test(speaker))return "document";
   if(/船骸|绞盘|晶石|封柱|机关|升降|墓灯/.test(speaker))return "mechanism";
   return "seal";
 }
@@ -1793,6 +1814,22 @@ function sequenceStep(chapter,index,expected,onSolved){
   else if(chapter==="opera")showToast("有一张面具垂下了头");
 }
 
+function collectMemoryFragment(id,title,lines){
+  const story=world.chapterProgress.story;
+  story.memoryFinds||(story.memoryFinds=[]);
+  const first=!story.memoryFinds.includes(id);
+  if(first){
+    story.memoryFinds.push(id);sound.pickup();
+    showToast(`旧事残片 ${story.memoryFinds.length}/5`,2.5);
+  }
+  queueDialogue(title,lines);
+  if(first&&story.memoryFinds.length>=5&&!story.memoryCompleteSeen){
+    story.memoryCompleteSeen=true;
+    queueDialogue("阿砚",["这些东西来自不同地方，却都在绕着同一个孩子打转。","不是六盏灯把我带到这里。是有人把关于『第七个』的记忆，拆开藏进了整座无阴镇。"]);
+    showGuidance("旧事拼合","五处不起眼的旧物终于连成了一条线。它们不会替你解开终章，但会改变你看待『阿砚』这个名字的方式。","",4.4);
+  }
+  saveGame({resumeRegion:world.currentRegion});
+}
 function handleChapterInteraction(obj){
   const p=world.chapterProgress[obj.chapter];if(!p)return;
   if(obj.kind==="npc")stageNpcConversation(obj,92);
@@ -1843,6 +1880,8 @@ function handleChapterInteraction(obj){
       ]);break;
     case "opera_false_bill":
       queueDialogue("旧排练单",["潦草抄着『高、低、中』，旁边又被人重重划掉。","纸背写着：『正角沈月娥病缺，替角排练用，不入正戏。』——这个名字被朱砂圈了两遍。"]);break;
+    case "opera_burned_ticket":
+      collectMemoryFragment(obj.id,"焦边戏票",["票根只剩半张：『中元夜，七人同看末场。』","座号却只印到六。第七个座位被人用朱砂画在票背，像临时添上去的。"]);break;
     case "opera_gong_0":case "opera_gong_1":case "opera_gong_2":
       if(p.solved){showToast("三锣已经归于沉寂");break;}
       if(p.clues.length<2){showToast("只凭锣声分不出三张脸，戏台两侧还有没看完的东西");break;}
@@ -1865,6 +1904,8 @@ function handleChapterInteraction(obj){
         "墨字从下往上：『近者受落地之光，远者逐升起之火；居中者只听平直一线。』",
         "签尾有六个香客名字，第七格被整齐割掉。"
       ]);break;
+    case "bamboo_incense_book":
+      collectMemoryFragment(obj.id,"残破香火簿",["香火簿按年份记着六个固定名字。第七行每年都换一种笔迹，却从不写姓名。","最近一次只留下一句：『孩子怕水，不要让他听第三遍钟。』"]);break;
     case "bamboo_pool":{
       addUnique(p.clues,obj.id);
       if(p.tuned.length===3&&!p.reflectionSealed){
@@ -1919,6 +1960,8 @@ function handleChapterInteraction(obj){
     }
     case "ferry_manifest":
       queueDialogue("渡船旧册",["旧册每页都只有六个姓名栏，但页角都多出一道没有编号的水痕。","有人用不同年份的墨反复写过：『别数最后一个。』"]);break;
+    case "ferry_child_ticket":
+      collectMemoryFragment(obj.id,"儿童船票",["一张从未撕验过的儿童票，日期正好是七年前的中元夜。","姓名栏被水泡白了，只剩年龄：七岁。背面有人写着：『没上船，也算一个。』"]);break;
     case "ferry_winch":
       if(p.solved){showToast("绞盘已经锁定在逆流方向");break;}
       if(p.names.length<3){showToast(`绞盘的三个卡槽仍空着 ${p.names.length}/3`);break;}
@@ -1937,6 +1980,8 @@ function handleChapterInteraction(obj){
         ["归乡者碑：『离乡七年，逆水而归。我停在老者另一侧，却永远碰不到那个孩子。』"]
       ];queueDialogue(obj.name,lines[obj.index]);break;
     }
+    case "city_paper_crane":
+      collectMemoryFragment(obj.id,"压扁的纸鹤",["纸鹤翅膀内侧写着六个成人名字，笔画都很稳。","最里面还有一行孩子的字：『我叫阿——』，后半个字被折痕压掉了。"]);break;
     case "city_false_grave":{
       triggerClueReaction("city_false_grave","seventh-gap");
       if(p.epitaphs.length<3){
@@ -2006,6 +2051,8 @@ function handleChapterInteraction(obj){
         "六道刻痕都有被供奉过的磨损，只有最后一道像是后来硬挤进去的空位。",
         "旁边留着四个几乎被擦掉的字：『影、声、名、位』。"
       ]);break;
+    case "final_blank_tag":
+      collectMemoryFragment(obj.id,"烧白的空名签",["名签被火烤得只剩纤维，没有旧名，也没有死亡年月。","边缘却有和纸扎铺旧照片完全一致的红线。它像是先有了一具替身，后来才等到一个名字。"]);break;
     case "final_dial":
       if(!p.convergenceStarted){showToast("七相转盘还没有与镜中的影子接上");break;}
       p.candidate=(p.candidate+1)%7;p.dial=p.candidate;resetFinalInspection(p);sound.play("ui_select",{volume:.24});showToast(`照魂镜转到第 ${p.candidate+1} 道影子`,1.8);break;
@@ -2798,7 +2845,7 @@ function update(dt){
     world.lamp.stable=lerp(world.lamp.stable,1,clamp(dt*4,0,1));
   }
   updateParticles(dt);
-  if(world.endingTimer>0){world.endingTimer-=dt;if(world.endingTimer<=0&&world.epilogueActive){world.epilogueActive=false;world.epilogueComplete=true;state="ending";try{localStorage.removeItem(SAVE_KEY);}catch(_e){}}}
+  if(world.endingTimer>0){world.endingTimer-=dt;if(world.endingTimer<=0&&world.epilogueActive){world.epilogueActive=false;world.epilogueComplete=true;state="ending";try{localStorage.removeItem(SAVE_KEY);localStorage.removeItem(SAVE_BACKUP_KEY);}catch(_e){}}}
   if(window.Motion)window.Motion.afterUpdate(dt);
   else {const target=clamp(player.x-W*.38,0,world.width-W);cameraX=lerp(cameraX,target,clamp(dt*4.5,0,1));}
   shake=Math.max(0,shake-dt*28); pressed.clear();released.clear();
@@ -4225,7 +4272,9 @@ document.getElementById("restartBtn").onclick=()=>{hidePanels();state="playing";
 document.getElementById("quitBtn").onclick=()=>{state="menu";showPanel(menu);};
 document.getElementById("fullscreen").onclick=()=>{if(!document.fullscreenElement)document.getElementById("app").requestFullscreen?.();else document.exitFullscreen?.();};
 
-try{if(localStorage.getItem(SAVE_KEY))continueBtn.classList.remove("hidden");}catch(_e){}
+try{if(loadBestSave())continueBtn.classList.remove("hidden");}catch(_e){}
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&state==="playing"&&world&&player&&!player.dead)saveGame({resumeRegion:world.currentRegion});});
+window.addEventListener("pagehide",()=>{if(state==="playing"&&world&&player&&!player.dead)saveGame({resumeRegion:world.currentRegion});});
 window.addEventListener("resize",resizeGameViewport);
 resizeGameViewport();
 buildWorld();resetPlayer();requestAnimationFrame(loop);
