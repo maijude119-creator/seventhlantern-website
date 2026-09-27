@@ -2901,7 +2901,8 @@ function chooseBossAttack(b){
   const pools={
     1:["triple","wideTriple"],
     2:["fan","fanWave","doubleWave"],
-    3:["dashVolley","rageFan","dashWave"]
+    3:["dashVolley","rageFan","dashWave"],
+    4:["echoRing","echoChase","echoCross"]
   };
   let pool=pools[b.phase]||pools[1];
   if(pool.length>1&&b.lastAttackId)pool=pool.filter(id=>id!==b.lastAttackId);
@@ -2911,7 +2912,8 @@ function bossAttackMeta(id){
   const table={
     triple:{kind:"volley",windup:.62,label:"三口聚光"},wideTriple:{kind:"volley",windup:.70,label:"散口聚光"},
     fan:{kind:"volley",windup:.58,label:"百口齐鸣"},fanWave:{kind:"ground",windup:.66,label:"灯声压地"},doubleWave:{kind:"ground",windup:.70,label:"双向灯潮"},
-    dashVolley:{kind:"dash",windup:.50,label:"黑灯扑身"},rageFan:{kind:"volley",windup:.48,label:"乱口追声"},dashWave:{kind:"dash",windup:.52,label:"黑灯踏浪"}
+    dashVolley:{kind:"dash",windup:.50,label:"黑灯扑身"},rageFan:{kind:"volley",windup:.48,label:"乱口追声"},dashWave:{kind:"dash",windup:.52,label:"黑灯踏浪"},
+    echoRing:{kind:"volley",windup:.56,label:"回响成环"},echoChase:{kind:"dash",windup:.46,label:"旧路追身"},echoCross:{kind:"ground",windup:.60,label:"双世交错"}
   };
   return table[id]||{kind:"volley",windup:.56,label:"灯口聚光"};
 }
@@ -2940,7 +2942,14 @@ function bossAttack(b){
   const oddCount=base=>{let n=Math.max(3,Math.round(base*volleyMul));if(n%2===0)n+=1;return n;};
   const fan=(count,center,spread,speed,r,damage,life,color)=>{const half=(count-1)/2;for(let i=0;i<count;i++)shot(center+(i-half)*spread,speed,r,damage,life,color);};
 
-  if(attackId==="triple"){
+  if(attackId==="echoRing"){
+    for(let i=0;i<12;i++)shot(i*Math.PI*2/12,248,9,14,3.4,"#a94d78");
+  }else if(attackId==="echoChase"){
+    b.dash=.54;b.dashTotal=.54;b.dashDir=b.telegraphDir||Math.sign(player.x-(b.x+b.w*.5))||-1;
+    for(let i=-2;i<=2;i++)shot(aim+i*.16,330,9,15,3.0,"#b85a7c");
+  }else if(attackId==="echoCross"){
+    groundWave(-1,390);groundWave(1,390);fan(5,aim,.18,300,10,15,3.1,"#9c466d");
+  }else if(attackId==="triple"){
     fan(3,aim,.15,245,10,12,4,"#d3913f");
   }else if(attackId==="wideTriple"){
     fan(3,aim,.27,230,10,12,4,"#c88945");
@@ -2971,7 +2980,7 @@ function updateBoss(dt){
   }
   b.hurt=Math.max(0,b.hurt-dt);b.attackFlash=Math.max(0,b.attackFlash-dt);
   b.uiHp=lerp(b.uiHp??b.hp,b.hp,clamp(dt*8,0,1));
-  const desiredPhase=b.hp<b.maxHp*.32?3:b.hp<b.maxHp*.65?2:1;
+  const desiredPhase=(difficulty==="echo"&&b.hp<b.maxHp*.14)?4:b.hp<b.maxHp*.32?3:b.hp<b.maxHp*.65?2:1;
 
   // Phase behavior is locked until the visual transition completes. The old
   // implementation changed b.phase immediately, so Phase 02 AI could start on
@@ -2979,7 +2988,7 @@ function updateBoss(dt){
   if(!b.pendingPhase&&desiredPhase!==b.phase){
     b.pendingPhase=desiredPhase;b.transitionFrom=b.phase;b.transitionTo=desiredPhase;
     b.phaseTransition=b.phaseTransitionTotal||.58;b.windup=0;b.dash=0;b.timer=.55;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphLabel="";b.telegraphTotal=0;
-    showToast(desiredPhase===2?"戏台展开，满城低语从灯幕后涌出":"灯幕伏地，黑灯开始追猎",2.4);
+    showToast(desiredPhase===2?"戏台展开，满城低语从灯幕后涌出":desiredPhase===4?"你上一次打败它的声音，被它自己学会了":"灯幕伏地，黑灯开始追猎",2.4);
     sound.bossPhase();
     if(desiredPhase===2){window.AudioManager?.play('gong_low',{volume:.22});window.AudioManager?.play('temple_bell_far',{volume:.18});}
     if(desiredPhase===3){bossNarrativeBeat(b,"phase3","“不是你的名字。”");window.AudioManager?.play('ferry_water',{volume:.16});}
@@ -3043,7 +3052,7 @@ function updateBoss(dt){
   b.timer-=dt;
   if(b.timer<=0){
     queueBossAttack(b);
-    b.timer=b.phase===1?2.50:b.phase===2?2.10:1.78;
+    b.timer=b.phase===1?2.50:b.phase===2?2.10:b.phase===4?1.42:1.78;
   }
 }
 
@@ -4030,7 +4039,8 @@ function drawBossV2(){
   if(b.voiceTrial){ctx.globalAlpha=.52+.08*Math.sin(t*6);ctx.globalCompositeOperation="screen";}
   else if(b.hurt){ctx.globalCompositeOperation="screen";ctx.globalAlpha=.86;}
   const glowPhase=b.pendingPhase||b.phase;
-  glow(x+b.w/2,y+b.h*.45,glowPhase===3?230:190,glowPhase===3?"#d54436":"#d18a3b",.24);
+  const bossGlow=glowPhase===4?"#a94d78":glowPhase>=3?"#d54436":"#d18a3b";
+  glow(x+b.w/2,y+b.h*.45,glowPhase>=3?230:190,bossGlow,glowPhase===4?.31:.24);
   const bossActionActive=b.phaseTransition<=0&&(b.windup>0||b.attackFlash>0||b.dash>0);
   if(b.phaseTransition>0&&b.pendingPhase){
     const p=clamp(1-b.phaseTransition/(b.phaseTransitionTotal||.58),0,1);
@@ -4067,7 +4077,7 @@ function drawBossV2(){
     const idx=Math.min(3,Math.floor(clamp(actionP,0,.9999)*4));
     ctx.save();ctx.translate(x+b.w/2,y+b.h+4);ctx.rotate(visual.rotation||0);
     if(phase===2)drawProductionSeries("prodBossP2_",4,idx,0,0,330,false,.96);
-    else if(phase===3)drawProductionSeries("prodBossP3_",4,idx,0,0,285,false,.98);
+    else if(phase>=3)drawProductionSeries("prodBossP3_",4,idx,0,0,285,false,phase===4?.92:.98);
     else if(b.attackFlash>0||b.windup>0)drawProductionSeries("prodBossErupt_",4,idx,0,0,260,false,.86);
     ctx.restore();
   }
