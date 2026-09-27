@@ -2634,7 +2634,7 @@ function beginBoss(){
     x:6470,y:350,w:330,h:225,hp:maxHp,maxHp,uiHp:maxHp,
     timer:1.2,windup:0,attackFlash:0,dash:0,dashTotal:.48,hurt:0,
     phase:1,lastPhase:1,pendingPhase:null,transitionFrom:1,transitionTo:1,
-    phaseTransition:0,phaseTransitionTotal:.46,lastAttackId:null,queuedAttackId:null,telegraphKind:null,telegraphLabel:"",telegraphDir:-1,telegraphTotal:0,attackRepeat:0,voiceTrial:false,voiceTrialDone:false,voiceProbe:[0,0,0],voiceRevealed:[false,false,false],voiceCorrect:1,voiceHitHint:false,voiceControlHintShown:false,storyBeats:new Set()
+    phaseTransition:0,phaseTransitionTotal:.58,lastAttackId:null,queuedAttackId:null,telegraphKind:null,telegraphLabel:"",telegraphDir:-1,telegraphTotal:0,attackRepeat:0,voiceTrial:false,voiceTrialDone:false,voiceProbe:[0,0,0],voiceRevealed:[false,false,false],voiceCorrect:1,voiceHitHint:false,voiceControlHintShown:false,storyBeats:new Set()
   };
   sound.boss(); shake=18; queueDialogue("百口灯妖",["阿——砚——", "这些声音里，有一个属于你。"]); showToast("首领：百口灯妖",3);
 }
@@ -2716,7 +2716,7 @@ function updateBoss(dt){
   // the same frame that Phase 01 art disappeared.
   if(!b.pendingPhase&&desiredPhase!==b.phase){
     b.pendingPhase=desiredPhase;b.transitionFrom=b.phase;b.transitionTo=desiredPhase;
-    b.phaseTransition=b.phaseTransitionTotal||.46;b.windup=0;b.dash=0;b.timer=.55;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphLabel="";b.telegraphTotal=0;
+    b.phaseTransition=b.phaseTransitionTotal||.58;b.windup=0;b.dash=0;b.timer=.55;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphLabel="";b.telegraphTotal=0;
     showToast(desiredPhase===2?"戏台展开，满城低语从灯幕后涌出":"灯幕伏地，黑灯开始追猎",2.4);
     window.AudioManager?.play('boss_phase_change',{volume:.42});
     if(desiredPhase===2){window.AudioManager?.play('gong_low',{volume:.22});window.AudioManager?.play('temple_bell_far',{volume:.18});}
@@ -3678,20 +3678,20 @@ function drawEnemyV2(e){
     else {prefix="prodLanternDeath_";count=7;height=154;}
     index=Math.min(count-1,Math.floor(dp*count));
   }else if(e.type==="paper"){
-    if(e.hurt>0){prefix="prodPaperHurt_";count=2;index=Math.floor((.18-e.hurt)*16);} 
+    if(e.hurt>0){prefix="prodPaperHurt_";count=2;index=Math.min(count-1,Math.floor(clamp((.18-e.hurt)/.18,0,.9999)*count));} 
     else if(attacking){prefix="prodPaperAttack_";count=6;index=Math.floor(motion.attackProgress*(count-.001));} 
     else if(moving){prefix=Math.abs(e.vx)>e.speed*.75?"prodPaperRun_":"prodPaperWalk_";count=6;index=Math.floor(motion.phase)%count;} 
-    else {prefix="prodPaperIdle_";count=4;index=Math.floor(t*5);}
+    else {prefix="prodPaperIdle_";count=4;index=Math.floor((motion.animTime||0)*4.2)%count;}
   }else if(e.type==="shadow"){
-    if(e.hurt>0){prefix="prodShadowHurt_";count=3;index=Math.floor((.18-e.hurt)*18);} 
+    if(e.hurt>0){prefix="prodShadowHurt_";count=3;index=Math.min(count-1,Math.floor(clamp((.18-e.hurt)/.18,0,.9999)*count));} 
     else if(attacking){prefix="prodShadowAttack_";count=7;index=Math.floor(motion.attackProgress*(count-.001));} 
     else if(moving){prefix="prodShadowMove_";count=6;index=Math.floor(motion.phase)%count;} 
-    else {prefix="prodShadowIdle_";count=6;index=Math.floor(t*6);}
+    else {prefix="prodShadowIdle_";count=6;index=Math.floor((motion.animTime||0)*5.0)%count;}
   }else{
-    if(e.hurt>0){prefix="prodLanternHurt_";count=4;index=Math.floor((.18-e.hurt)*22);}
+    if(e.hurt>0){prefix="prodLanternHurt_";count=4;index=Math.min(count-1,Math.floor(clamp((.18-e.hurt)/.18,0,.9999)*count));}
     else if(attacking){prefix="prodLanternAttack_";count=6;index=Math.floor(motion.attackProgress*(count-.001));} 
     else if(moving){prefix="prodLanternMove_";count=6;index=Math.floor(motion.phase)%count;} 
-    else {prefix="prodLanternIdle_";count=6;index=Math.floor(t*6);}
+    else {prefix="prodLanternIdle_";count=6;index=Math.floor((motion.animTime||0)*4.6)%count;}
   }
   ctx.save();if(e.hurt)ctx.globalAlpha=.72;
   // Ground contact + restrained warm rim light keep dark enemies readable
@@ -3763,10 +3763,12 @@ function drawBossV2(){
   else if(b.hurt){ctx.globalCompositeOperation="screen";ctx.globalAlpha=.86;}
   const glowPhase=b.pendingPhase||b.phase;
   glow(x+b.w/2,y+b.h*.45,glowPhase===3?230:190,glowPhase===3?"#d54436":"#d18a3b",.24);
+  const bossActionActive=b.phaseTransition<=0&&(b.windup>0||b.attackFlash>0||b.dash>0);
   if(b.phaseTransition>0&&b.pendingPhase){
-    const p=clamp(1-b.phaseTransition/(b.phaseTransitionTotal||.46),0,1);
-    drawPhase(b.transitionFrom,1-p*.88,1-p*.06);drawPhase(b.transitionTo,p,.90+p*.10);
-  }else drawPhase(b.phase,1,1);
+    const p=clamp(1-b.phaseTransition/(b.phaseTransitionTotal||.58),0,1);
+    const ease=p*p*(3-2*p);
+    drawPhase(b.transitionFrom,1-ease*.94,1-ease*.045);drawPhase(b.transitionTo,ease,.94+ease*.06);
+  }else drawPhase(b.phase,(bossActionActive&&b.phase>=2)?.16:1,1);
   if(b.windup>0&&b.telegraphKind){
     const tq=clamp(1-b.windup/Math.max(.001,b.telegraphTotal||b.windup),0,1),cx=x+b.w*.5,cy=y+b.h*.46,dir=b.telegraphDir||-1;
     ctx.save();ctx.globalCompositeOperation="screen";
@@ -3788,12 +3790,17 @@ function drawBossV2(){
   }
   // Production attack frames are layered only during attack execution, keeping
   // the authored phase silhouette while adding a clear anticipation/action pose.
-  if(b.phaseTransition<=0&&(b.windup>0||b.attackFlash>0||b.dash>0)){
-    const phase=b.phase||1,idx=Math.floor(t*10);
+  if(bossActionActive){
+    const phase=b.phase||1;
+    let actionP=.5;
+    if(b.windup>0)actionP=clamp(1-b.windup/Math.max(.001,b.telegraphTotal||b.windup),0,1)*.42;
+    else if(b.dash>0)actionP=.42+clamp(1-b.dash/Math.max(.001,b.dashTotal||.48),0,1)*.46;
+    else if(b.attackFlash>0)actionP=.42+clamp(1-b.attackFlash/.32,0,1)*.58;
+    const idx=Math.min(3,Math.floor(clamp(actionP,0,.9999)*4));
     ctx.save();ctx.translate(x+b.w/2,y+b.h+4);ctx.rotate(visual.rotation||0);
-    if(phase===2)drawProductionSeries("prodBossP2_",4,idx,0,0,330,false,.78);
-    else if(phase===3)drawProductionSeries("prodBossP3_",4,idx,0,0,285,false,.82);
-    else if(b.attackFlash>0)drawProductionSeries("prodBossErupt_",4,idx,0,0,260,false,.72);
+    if(phase===2)drawProductionSeries("prodBossP2_",4,idx,0,0,330,false,.96);
+    else if(phase===3)drawProductionSeries("prodBossP3_",4,idx,0,0,285,false,.98);
+    else if(b.attackFlash>0||b.windup>0)drawProductionSeries("prodBossErupt_",4,idx,0,0,260,false,.86);
     ctx.restore();
   }
   if(b.attackFlash>0){ctx.globalAlpha=Math.min(1,b.attackFlash*2.1);ctx.strokeStyle="#f4bf66";ctx.lineWidth=4;ctx.beginPath();ctx.arc(x+b.w/2,y+b.h*.48,120+Math.sin(t*18)*10,0,Math.PI*2);ctx.stroke();}
@@ -3850,7 +3857,7 @@ function drawPlayerV2(){
     const motionState=window.Motion?.getPlayerMotionState?.()||{mode:player.hurtTimer>0?"hurt":player.attack?"attack":player.grounded?"idle":"air",phase:t*1.2,airMode:player.vy<-120?"rise":player.vy>120?"fall":"apex"};
     const locomotionModes=new Set(["startMove","move","stopMove","turn"]);
     const moving=player.grounded&&locomotionModes.has(motionState.mode)&&Math.abs(player.vx)>8;
-    const fast=Math.abs(player.vx)>168;
+    const fast=(motionState.gait||"walk")==="run";
     const locomotionFrames=fast?["ayanRun1","ayanRun2","ayanRun3","ayanRun4","ayanRun5","ayanRun6"]:["ayanWalk1","ayanWalk2","ayanWalk3","ayanWalk4","ayanWalk5","ayanWalk6"];
     // Motion.phase is still calibrated to the original 3-frame stride. Walk now has
     // six true poses, so sample it at 2x frame density without changing stride speed.
@@ -3867,7 +3874,7 @@ function drawPlayerV2(){
     const visual=window.Motion?.getPlayerVisual?.()||{};
     ctx.save();const paperState=paperBodyState();if(player.invuln>0&&Math.floor(t*20)%2)ctx.globalAlpha=.38;else if(paperState.critical)ctx.globalAlpha=1-paperState.translucency;
     glow(x+20,y+50,58,"#f3b34a",.18);
-    if(player.dodging>0){for(let i=4;i>0;i--){ctx.save();ctx.translate(x+20-player.facing*i*16,visualFootY);ctx.rotate(visual.rotation||0);ctx.scale(visual.scaleX||1,visual.scaleY||1);drawSpriteAsset(pose,0,0,148,player.facing<0,.045*i);ctx.restore();}}
+    if(player.dodging>0){const dd=player.dodgeDirection||-player.facing;for(let i=4;i>0;i--){ctx.save();ctx.translate(x+20-dd*i*16,visualFootY);ctx.rotate(visual.rotation||0);ctx.scale(visual.scaleX||1,visual.scaleY||1);drawSpriteAsset(pose,0,0,148,player.facing<0,.045*i);ctx.restore();}}
     ctx.save();ctx.translate(x+20+(visual.offsetX||0),visualFootY+(visual.offsetY||0));ctx.rotate(visual.rotation||0);ctx.scale(visual.scaleX||1,visual.scaleY||1);
     if(player.dead&&player.deathPhase==="collapse"){
       const dp=clamp((player.deathVisualTimer||0)/.42,0,1),count=7;
@@ -3883,16 +3890,22 @@ function drawPlayerV2(){
     }else if(motionState.mode==="attack"&&player.attack){
       const ap=clamp(player.attack.time/player.attack.total,0,1);
       if(player.attack.type==="ritual"){
-        const ritualPose=player.attack.kind==="ritual-thrust"?"ayanInspect":(player.attack.kind==="ritual-reverse"||player.attack.step===2)?"ayanCrouch":"ayanDodge";
-        const h=ritualPose==="ayanCrouch"?150:(ritualPose==="ayanInspect"?162:136);
-        drawSpriteAsset(ritualPose,0,0,h,player.facing<0,1);
+        let prefix="prodAyanAttack1_",count=5,height=180;
+        if(player.attack.kind==="ritual-reverse"){prefix="prodAyanAttack2_";count=6;height=182;}
+        else if(player.attack.kind==="ritual-thrust"){prefix="prodAyanAttack3_";count=6;height=184;}
+        else if(player.attack.kind==="ritual-finish"||player.attack.kind==="ritual-dash"||player.attack.charged){prefix="prodAyanHeavy_";count=4;height=186;}
+        const eased=ap<.22?(ap/.22)*.16:.16+((ap-.22)/.78)*.84;
+        const idx=Math.min(count-1,Math.floor(clamp(eased,0,.9999)*count));
+        if(!drawProductionSeries(prefix,count,idx,0,0,height,player.facing<0,1)){
+          drawSpriteAsset(player.attack.charged?"ayanAttackHeavy":"ayanAttackLight",0,0,176,player.facing<0,1);
+        }
       }else{
-        let prefix="prodAyanAttack1_",count=5;
-        if(player.attack.charged){prefix="prodAyanAttack3_";count=6;}
+        let prefix="prodAyanAttack1_",count=5,height=184;
+        if(player.attack.charged){prefix="prodAyanHeavy_";count=4;height=188;}
         else if(player.attack.step===2){prefix="prodAyanAttack2_";count=6;}
         else if(player.attack.step===3){prefix="prodAyanAttack3_";count=6;}
-        const idx=Math.min(count-1,Math.floor(ap*count));
-        if(!drawProductionSeries(prefix,count,idx,0,0,184,player.facing<0,1))drawSpriteAsset(player.attack.charged?"ayanAttackHeavy":"ayanAttackLight",0,0,174,player.facing<0,1);
+        const idx=Math.min(count-1,Math.floor(clamp(ap,0,.9999)*count));
+        if(!drawProductionSeries(prefix,count,idx,0,0,height,player.facing<0,1))drawSpriteAsset(player.attack.charged?"ayanAttackHeavy":"ayanAttackLight",0,0,174,player.facing<0,1);
       }
     }else if(motionState.mode==="air"){
       // Six clean jump poses only: every frame keeps Ayan's lantern visible.
@@ -4323,7 +4336,7 @@ resizeGameViewport();
 buildWorld();resetPlayer();requestAnimationFrame(loop);
 
 // Expose a minimal diagnostic surface for automated smoke tests.
-window.__GAME__={getState:()=>({state,difficulty,dialogue:currentDialogue?.text||null,guidance:{title:guidance.title,timer:guidance.timer},camera:{x:cameraX},render:{alpha:renderAlpha,interpolated:getInterpolatedRenderState()},player:{x:player.x,y:player.y,groundY:player.groundY,health:player.health,paperBody:paperBodyState(),paperHurtFlash:player.paperHurtFlash||0,weapon:player.weapon?.type||null,lampHeld:player.lampHeld,grounded:player.grounded,dodging:player.dodging,guarding:player.guarding,attacking:!!player.attack,attackCharged:!!player.attack?.charged,attackKind:player.attack?.kind||null,attackStep:player.attack?.step||0,lampOrigin:lampPose(),checkpointX:player.checkpointX,checkpointY:player.checkpointY,dead:player.dead,deathPhase:player.deathPhase,deathVisualTimer:player.deathVisualTimer,interact:player.interactTarget?.kind||null,interactId:player.interactTarget?.obj?.id||null,interactCandidates:(player.interactCandidates||[]).map(t=>interactionTargetId(t)),interactIndex:player.interactIndex||0,hurtbox:getPlayerHurtbox(),hurtTimer:player.hurtTimer||0},world:{embers:world.emberCount,doorOpen:world.doorOpen,gateOpen:world.gateOpen,wallHp:world.wallHp,puzzleStep:world.puzzleStep,bossActive:world.bossActive,bossDefeated:world.bossDefeated,currentRegion:world.currentRegion,lanternsRecovered:world.lanternsRecovered,finalReady:world.finalReady,finalChoice:world.finalChoice,endingChoiceActive:world.endingChoiceActive,endingChoiceIndex:world.endingChoiceIndex,epilogueActive:world.epilogueActive,epilogueBeat:world.epilogueBeat,epilogueComplete:world.epilogueComplete,chapterProgress:JSON.parse(JSON.stringify(world.chapterProgress)),tutorialFlags:{...world.tutorialFlags},storyApparitions:Object.keys(world.storyRuntime?.active||{}),ritualBladeUnlocked:world.ritualBladeUnlocked,bossHp:world.boss?Math.max(0,Math.round(world.boss.hp)):null,bossPhase:world.boss?.phase||null,bossPendingPhase:world.boss?.pendingPhase||null,bossTransition:world.boss?.phaseTransition||0,bossLastAttack:world.boss?.lastAttackId||null,particles:world.particles.length,projectiles:world.projectiles.length,lanternStable:world.lamp.stable,firstEncounterStarted:world.firstEncounterStarted,firstShadowDefeated:world.firstShadowDefeated,enemiesAlive:world.enemies.filter(e=>e.alive).length,drops:world.drops.map(d=>({type:d.type,x:Math.round(d.x),y:Math.round(d.y)})),nearEnemies:world.enemies.filter(e=>e.alive&&!e.inactive&&Math.abs(e.x-player.x)<180).map(e=>({type:e.type,hp:Math.round(e.hp),x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,aiState:e.aiState,exposed:e.exposed})),enemies:world.enemies.filter(e=>e.alive).map(e=>({id:e.id,type:e.type,x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,grounded:e.grounded,aiState:e.aiState,stuckTimer:e.stuckTimer||0}))},errors:window.__GAME_ERRORS__||[]}),start:startGame,teleport:(x,y=480)=>{player.x=x;player.y=y;player.vx=player.vy=0;const g=getPrimaryGroundAt(player.x+player.w*.5);if(g){player.y=g.y-player.h;player.grounded=true;}},damage:damagePlayer};
+window.__GAME__={animationRevision:'v1.1-preview3',getState:()=>({state,difficulty,dialogue:currentDialogue?.text||null,guidance:{title:guidance.title,timer:guidance.timer},camera:{x:cameraX},render:{alpha:renderAlpha,interpolated:getInterpolatedRenderState()},player:{x:player.x,y:player.y,groundY:player.groundY,health:player.health,paperBody:paperBodyState(),paperHurtFlash:player.paperHurtFlash||0,weapon:player.weapon?.type||null,lampHeld:player.lampHeld,grounded:player.grounded,dodging:player.dodging,guarding:player.guarding,attacking:!!player.attack,attackCharged:!!player.attack?.charged,attackKind:player.attack?.kind||null,attackStep:player.attack?.step||0,lampOrigin:lampPose(),checkpointX:player.checkpointX,checkpointY:player.checkpointY,dead:player.dead,deathPhase:player.deathPhase,deathVisualTimer:player.deathVisualTimer,interact:player.interactTarget?.kind||null,interactId:player.interactTarget?.obj?.id||null,interactCandidates:(player.interactCandidates||[]).map(t=>interactionTargetId(t)),interactIndex:player.interactIndex||0,hurtbox:getPlayerHurtbox(),hurtTimer:player.hurtTimer||0},world:{embers:world.emberCount,doorOpen:world.doorOpen,gateOpen:world.gateOpen,wallHp:world.wallHp,puzzleStep:world.puzzleStep,bossActive:world.bossActive,bossDefeated:world.bossDefeated,currentRegion:world.currentRegion,lanternsRecovered:world.lanternsRecovered,finalReady:world.finalReady,finalChoice:world.finalChoice,endingChoiceActive:world.endingChoiceActive,endingChoiceIndex:world.endingChoiceIndex,epilogueActive:world.epilogueActive,epilogueBeat:world.epilogueBeat,epilogueComplete:world.epilogueComplete,chapterProgress:JSON.parse(JSON.stringify(world.chapterProgress)),tutorialFlags:{...world.tutorialFlags},storyApparitions:Object.keys(world.storyRuntime?.active||{}),ritualBladeUnlocked:world.ritualBladeUnlocked,bossHp:world.boss?Math.max(0,Math.round(world.boss.hp)):null,bossPhase:world.boss?.phase||null,bossPendingPhase:world.boss?.pendingPhase||null,bossTransition:world.boss?.phaseTransition||0,bossLastAttack:world.boss?.lastAttackId||null,particles:world.particles.length,projectiles:world.projectiles.length,lanternStable:world.lamp.stable,firstEncounterStarted:world.firstEncounterStarted,firstShadowDefeated:world.firstShadowDefeated,enemiesAlive:world.enemies.filter(e=>e.alive).length,drops:world.drops.map(d=>({type:d.type,x:Math.round(d.x),y:Math.round(d.y)})),nearEnemies:world.enemies.filter(e=>e.alive&&!e.inactive&&Math.abs(e.x-player.x)<180).map(e=>({type:e.type,hp:Math.round(e.hp),x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,aiState:e.aiState,exposed:e.exposed})),enemies:world.enemies.filter(e=>e.alive).map(e=>({id:e.id,type:e.type,x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,grounded:e.grounded,aiState:e.aiState,stuckTimer:e.stuckTimer||0}))},errors:window.__GAME_ERRORS__||[]}),start:startGame,teleport:(x,y=480)=>{player.x=x;player.y=y;player.vx=player.vy=0;const g=getPrimaryGroundAt(player.x+player.w*.5);if(g){player.y=g.y-player.h;player.grounded=true;}},damage:damagePlayer};
 window.__GAME_ERRORS__=[];
 window.__ASSET_STATUS__=()=>({loaded:artLoaded,total:Object.keys(artFiles).length,missing:missingRequiredAssets(),ready:requiredAssetsReady(),official:Object.values(artFiles).filter(src=>src.includes("assets/SeventhLantern/")).length});
 window.addEventListener("error",e=>window.__GAME_ERRORS__.push(String(e.error||e.message)));
