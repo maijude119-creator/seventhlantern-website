@@ -73,10 +73,18 @@ function renderArchive(){
   const current=world?.chapterProgress?.story?.memoryFinds||[];
   const found=new Set([...(metaProgress.memoryFinds||[]),...current]);
   const visited=new Set([...(metaProgress.visitedRegions||[]),...Object.keys(world?.visitedRegions||{}).filter(k=>world.visitedRegions[k])]);
-  archiveSummary.innerHTML=`<span>旧事残片 ${found.size}/5</span><span>到访区域 ${visited.size}</span><span>通关 ${metaProgress.completions||0} 次</span><span>结局 ${(metaProgress.endings||[]).length}/3</span>`;
-  archiveGrid.innerHTML=MEMORY_ARCHIVE.map((m,i)=>found.has(m.id)?
+  archiveSummary.innerHTML=`<span>旧事残片 ${found.size}/5</span><span>到访区域 ${visited.size}</span><span>通关 ${metaProgress.completions||0} 次</span><span>结局 ${(metaProgress.endings||[]).length}/3</span><span>回响通关 ${metaProgress.echoClears||0} 次</span>`;
+  const endingNames={keep:"名字留下",return:"记忆归灯",extinguish:"第七盏灯熄灭"};
+  const memories=MEMORY_ARCHIVE.map((m,i)=>found.has(m.id)?
     `<article class="archive-card found"><small>${m.chapter}</small><b>${i+1}. ${m.title}</b><p>${m.text}</p><span class="archive-seal">已拾</span></article>`:
     `<article class="archive-card locked"><small>${m.chapter}</small><b>${i+1}. ？？？？</b><p>这段旧事还留在无阴镇的某个角落。</p></article>`).join("");
+  const endings=Object.entries(endingNames).map(([id,name])=>metaProgress.endings.includes(id)?
+    `<article class="archive-card found"><small>终局记录</small><b>${name}</b><p>这个选择已经被无阴镇记住。</p><span class="archive-seal">已见</span></article>`:
+    `<article class="archive-card locked"><small>终局记录</small><b>？？？？</b><p>还有一种结局没有被你亲自走到。</p></article>`).join("");
+  const echo=metaProgress.completed?(metaProgress.echoClears>0?
+    `<article class="archive-card found"><small>二周目</small><b>回响已平息</b><p>你已经在回响模式中再次走完整座无阴镇。</p><span class="archive-seal">回响</span></article>`:
+    `<article class="archive-card"><small>二周目</small><b>回响模式已解锁</b><p>更高敌人压力、更多战斗组合、无谜题失败提示。</p></article>`):"";
+  archiveGrid.innerHTML=memories+endings+echo;
 }
 persistSettings();refreshMetaButtons();
 
@@ -1181,6 +1189,11 @@ function buildWorld(){
   spawnEnemy(11330,565,"paper");
   spawnEnemy(13760,565,"shadow");
   spawnEnemy(15920,565,"shadow"); spawnEnemy(16960,565,"elite");
+  if(difficulty==="echo"){
+    // Echo mode remixes combat density without changing puzzle geometry.
+    spawnEnemy(8720,565,"paper");spawnEnemy(11610,565,"shadow");
+    spawnEnemy(14080,565,"paper");spawnEnemy(16480,565,"elite");
+  }
   validateWorldIntegrity();
 }
 
@@ -2718,7 +2731,7 @@ function updateEnemies(dt){
         if(e.aiState==="CHASE"){
           const attackRange=e.type==="paper"?118:e.type==="elite"?108:88;
           const activeAttackers=world.enemies.filter(other=>other!==e&&other.alive&&!other.inactive&&["PREPARE_ATTACK","ATTACK_ACTIVE"].includes(other.aiState)&&Math.abs((other.x+other.w*.5)-playerCx)<430).length;
-          const attackSlots=difficulty==="hard"?2:1;
+          const attackSlots=(difficulty==="hard"||difficulty==="echo")?2:1;
           if(!bound&&dist<attackRange&&verticalDist<80&&hasLOS&&e.attackTimer<=0&&activeAttackers<attackSlots){
             e.aiState="PREPARE_ATTACK";e.windupTotal=e.type==="paper" ? .46 : e.type==="elite" ? .42 : .34;e.stateTimer=e.windupTotal;e.windup=e.stateTimer;e.vx*=.18;
           }else{
