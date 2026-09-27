@@ -740,7 +740,8 @@ function showGuidance(title,text,key="",time=5){
 const difficultyValues = {
   story: { enemyDamage: .65, enemyHealth: .78, parry: .28, dodgeInvuln:.31, bossVolley:.78, bossProjectileSpeed:.90, label: "引灯" },
   normal: { enemyDamage: 1, enemyHealth: 1, parry: .18, dodgeInvuln:.25, bossVolley:1, bossProjectileSpeed:1, label: "夜行" },
-  hard: { enemyDamage: 1.35, enemyHealth: 1.2, parry: .11, dodgeInvuln:.21, bossVolley:1.15, bossProjectileSpeed:1.08, label: "无明" }
+  hard: { enemyDamage: 1.35, enemyHealth: 1.2, parry: .11, dodgeInvuln:.21, bossVolley:1.15, bossProjectileSpeed:1.08, label: "无明" },
+  echo: { enemyDamage: 1.48, enemyHealth: 1.32, parry: .09, dodgeInvuln:.20, bossVolley:1.22, bossProjectileSpeed:1.12, label: "回响" }
 };
 let difficulty = "normal";
 
@@ -766,7 +767,7 @@ const PUZZLE_HINTS={
     2:{text:"逐项核对倒影方向、回应铜片、旧名与第七空位，再点亮晶石。"}
   }}
 };
-function puzzleHintLevel(){if(!gameSettings.routeHints)return 0;return difficulty==="story"?2:difficulty==="normal"?1:0;}
+function puzzleHintLevel(){if(!gameSettings.routeHints||difficulty==="echo")return 0;return difficulty==="story"?2:difficulty==="normal"?1:0;}
 function showPuzzleFailureHint(chapter,code,context={}){
   const level=puzzleHintLevel();if(level<=0)return false;
   if(!world.puzzleHintCooldowns)world.puzzleHintCooldowns=Object.create(null);
@@ -1121,7 +1122,7 @@ function buildWorld(){
   world.firstEncounterStarted=false;world.firstShadowDefeated=false;
   world.doorOpen=false; world.noteFound=false; world.gateOpen=false; world.wallHp=3;
   world.puzzleStep=0; world.emberCount=0; world.bossActive=false; world.bossDefeated=false; world.boss=null; world.endingTimer=0;world.combatReleaseTimer=0;world.combatReleaseX=0;
-  world.currentRegion="paperShop";world.visitedRegions=Object.create(null);world.visitedRegions.paperShop=true;world.finalReady=false;world.finalChoice=false;world.lanternsRecovered=0;
+  world.currentRegion="paperShop";world.visitedRegions=Object.create(null);world.visitedRegions.paperShop=true;world.finalReady=false;world.finalChoice=false;world.lanternsRecovered=0;world.echoMode=difficulty==="echo";
   world.endingChoiceActive=false;world.endingChoiceIndex=0;world.epilogueActive=false;world.epilogueComplete=false;world.epilogueStartX=0;world.epilogueBeat=0;
   world.chapterProgress=freshChapterProgress();world.operaLift=null;world.ritualBladeUnlocked=false;world.npcRuntime=Object.create(null);world.npcRevealSeen=Object.create(null);world.puzzleHintCooldowns=Object.create(null);world.storyRuntime={active:Object.create(null)};world.shortcutRuntime=Object.create(null);world.clueReaction={active:false,timer:0,id:'',kind:''};world.clueReactionSeen=Object.create(null);world.tutorialFlags={lampRaisedOnce:false,shadowRevealLearned:false,interactSwitchLearned:false,ritualCutLearned:false,lanternCoreLearned:false};
   world.introRain=false;world.doorHintShown=false;world.combatHintShown=false;world.wallHintShown=false;world.lanternHintShown=false;
@@ -1298,7 +1299,8 @@ function startGame(diff="normal", fromSave=false, assetsConfirmed=false){
     }catch(_e){}
   }
   sound.start();
-  showGuidance("纸身初醒","先靠近引路灯并按 E 唤醒，再调查屋内发光的线索","A / D 移动　E 互动",5.5);
+  if(difficulty==="echo")showGuidance("回响模式","无阴镇记得你走过的路。敌人更强、Boss 更快，谜题不再主动给出失败提示。","存档仍独立保存",5.5);
+  else showGuidance("纸身初醒","先靠近引路灯并按 E 唤醒，再调查屋内发光的线索","A / D 移动　E 互动",5.5);
   queueDialogue("旁白",["中元夜，无阴镇的六盏引魂灯同时熄灭了。", "雨声之外，整座镇子再没有别的声音。"]);
   setTimeout(()=>queueDialogue("阿砚",["师父不在……桌上似乎留下了什么。"]),900);
 }
@@ -1995,7 +1997,7 @@ function collectMemoryFragment(id,title,lines){
   story.memoryFinds||(story.memoryFinds=[]);
   const first=!story.memoryFinds.includes(id);
   if(first){
-    story.memoryFinds.push(id);sound.pickup();
+    story.memoryFinds.push(id);sound.pickup();mergeMetaFromRun();
     showToast(`旧事残片 ${story.memoryFinds.length}/5`,2.5);
   }
   queueDialogue(title,lines);
@@ -2400,6 +2402,16 @@ function endingSubtitle(){
 function endingFinalLine(){
   return world.finalChoice==="keep"?"后来，镇里的人仍叫他阿砚。":world.finalChoice==="return"?"六盏灯各归其名，阿砚只带走自己的以后。":world.finalChoice==="extinguish"?"没有第七盏灯，天也会亮。":"";
 }
+function recordRunCompletion(){
+  mergeMetaFromRun();
+  metaProgress.completed=true;
+  metaProgress.completions=(metaProgress.completions||0)+1;
+  if(world.finalChoice&&!metaProgress.endings.includes(world.finalChoice))metaProgress.endings.push(world.finalChoice);
+  const rank={story:1,normal:2,hard:3,echo:4};
+  if((rank[difficulty]||0)>(rank[metaProgress.bestDifficulty]||0))metaProgress.bestDifficulty=difficulty;
+  if(difficulty==="echo")metaProgress.echoClears=(metaProgress.echoClears||0)+1;
+  persistMeta();
+}
 function beginEpilogue(choiceId){
   world.finalChoice=choiceId;world.endingChoiceActive=false;world.lanternsRecovered=7;world.epilogueActive=true;world.epilogueComplete=false;world.epilogueBeat=0;
   for(const e of world.enemies)e.inactive=true;world.bossActive=false;world.projectiles.length=0;world.fields.length=0;
@@ -2432,7 +2444,7 @@ function updateChapterProgress(){
   if(r.id===world.currentRegion)return;
   world.currentRegion=r.id;
   if(FULL_CHAPTERS[r.id]&&!world.visitedRegions[r.id]){
-    world.visitedRegions[r.id]=true;
+    world.visitedRegions[r.id]=true;mergeMetaFromRun();
     const c=FULL_CHAPTERS[r.id];showGuidance(c.title,c.text,"",3.0);
     // The room establishes itself before anyone explains it. Entering a chapter
     // never starts an NPC lecture; characters are optional witnesses, not quest givers.
@@ -3052,7 +3064,7 @@ function update(dt){
     world.lamp.stable=lerp(world.lamp.stable,1,clamp(dt*4,0,1));
   }
   updateParticles(dt);
-  if(world.endingTimer>0){world.endingTimer-=dt;if(world.endingTimer<=0&&world.epilogueActive){world.epilogueActive=false;world.epilogueComplete=true;state="ending";try{localStorage.removeItem(SAVE_KEY);localStorage.removeItem(SAVE_BACKUP_KEY);continueBtn.classList.add("hidden");}catch(_e){}}}
+  if(world.endingTimer>0){world.endingTimer-=dt;if(world.endingTimer<=0&&world.epilogueActive){world.epilogueActive=false;world.epilogueComplete=true;recordRunCompletion();state="ending";try{localStorage.removeItem(SAVE_KEY);localStorage.removeItem(SAVE_BACKUP_KEY);continueBtn.classList.add("hidden");}catch(_e){}}}
   if(window.Motion)window.Motion.afterUpdate(dt);
   else {const target=clamp(player.x-W*.38,0,world.width-W);cameraX=lerp(cameraX,target,clamp(dt*4.5,0,1));}
   shake=Math.max(0,shake-dt*28); pressed.clear();released.clear();
@@ -4565,6 +4577,10 @@ document.getElementById("helpBtn").onclick=()=>showPanel(helpPanel);
 document.getElementById("helpClose").onclick=()=>showPanel(menu);
 document.getElementById("backBtn").onclick=()=>showPanel(menu);
 document.querySelectorAll("[data-difficulty]").forEach(b=>b.onclick=()=>ensureAssetsThenStart(b.dataset.difficulty));
+echoBtn?.addEventListener("click",()=>{
+  if(!metaProgress.completed){showToast("通关一次后才能进入回响模式",2.4);return;}
+  ensureAssetsThenStart("echo",false);
+});
 document.getElementById("resumeBtn").onclick=()=>{clearTransientInputState();hidePanels();state="playing";lastTime=performance.now();fixedAccumulator=0;};
 document.getElementById("restartBtn").onclick=()=>{hidePanels();state="playing";respawn();};
 document.getElementById("quitBtn").onclick=()=>{if(world&&player&&!player.dead)saveGame({resumeRegion:world.currentRegion});clearTransientInputState();state="menu";window.AudioManager?.stopEnvironment?.();sound.started=false;sound.ambienceRegion="";showPanel(menu);};
