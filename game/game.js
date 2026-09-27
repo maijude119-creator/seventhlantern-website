@@ -479,6 +479,7 @@ const CHAPTER_INTERACTABLES=[
   {id:"opera_mask_a",chapter:"opera",kind:"clue",x:7900,y:545,name:"残缺戏单"},
   {id:"opera_false_bill",chapter:"opera",kind:"flavor",x:8180,y:548,name:"旧排练单"},
   {id:"opera_burned_ticket",chapter:"opera",kind:"flavor",x:8385,y:548,name:"焦边戏票"},
+  {id:"echo_opera_name",chapter:"opera",kind:"echoMemory",x:8060,y:548,name:"反写戏名"},
   {id:"opera_mask_b",chapter:"opera",kind:"clue",x:9580,y:420,name:"楼座无面具架"},
   {id:"opera_gong_0",chapter:"opera",kind:"gong",index:0,x:8500,y:610,name:"低锣"},
   {id:"opera_gong_1",chapter:"opera",kind:"gong",index:1,x:8790,y:610,name:"中锣"},
@@ -488,6 +489,7 @@ const CHAPTER_INTERACTABLES=[
   {id:"bamboo_prayer",chapter:"bamboo",kind:"clue",x:10410,y:548,name:"倒写祈愿签"},
   {id:"bamboo_pool",chapter:"bamboo",kind:"clue",x:10730,y:560,name:"积水倒影"},
   {id:"bamboo_incense_book",chapter:"bamboo",kind:"flavor",x:10920,y:548,name:"残破香火簿"},
+  {id:"echo_bamboo_bell",chapter:"bamboo",kind:"echoMemory",x:10610,y:548,name:"水下钟影"},
   {id:"bamboo_bell_0",chapter:"bamboo",kind:"bell",index:0,x:11100,y:520,name:"近钟"},
   {id:"bamboo_bell_1",chapter:"bamboo",kind:"bell",index:1,x:11410,y:500,name:"中钟"},
   {id:"bamboo_bell_2",chapter:"bamboo",kind:"bell",index:2,x:11720,y:475,name:"远钟"},
@@ -500,6 +502,7 @@ const CHAPTER_INTERACTABLES=[
   {id:"ferry_name_2",chapter:"ferry",kind:"nameSlip",index:2,x:14010,y:558,name:"无字名签",propMount:"wreckEdge",anchorDx:0,anchorDy:-1},
   {id:"ferry_manifest",chapter:"ferry",kind:"flavor",x:14200,y:550,name:"渡船旧册"},
   {id:"ferry_child_ticket",chapter:"ferry",kind:"flavor",x:14435,y:550,name:"儿童船票"},
+  {id:"echo_ferry_song",chapter:"ferry",kind:"echoMemory",x:13765,y:550,name:"船底童谣"},
   {id:"ferry_winch",chapter:"ferry",kind:"winch",x:14360,y:610,name:"渡口绞盘"},
   {id:"shenpo_city",chapter:"city",kind:"npc",x:14980,y:610,sprite:"npcShenPo",npcType:"shenpo",name:"沈婆"},
   {id:"lantern_girl_city",chapter:"story",kind:"npc",x:16330,y:610,sprite:"npcLanternGirlIdle",npcType:"girl",name:"？？？"},
@@ -508,6 +511,7 @@ const CHAPTER_INTERACTABLES=[
   {id:"city_grave_2",chapter:"city",kind:"epitaph",index:2,x:16180,y:560,name:"归乡者墓碑"},
   {id:"city_false_grave",chapter:"city",kind:"emptyGrave",x:16340,y:560,name:"第七空坟"},
   {id:"city_paper_crane",chapter:"city",kind:"flavor",x:16255,y:548,name:"压扁的纸鹤"},
+  {id:"echo_city_backtext",chapter:"city",kind:"echoMemory",x:16025,y:548,name:"反面碑文"},
   {id:"city_memory_0",chapter:"city",kind:"memoryToken",index:0,x:16425,y:575,name:"幼者纸拓",propMount:"graveStone",anchorDx:0,anchorDy:-4},
   {id:"city_memory_1",chapter:"city",kind:"memoryToken",index:1,x:16505,y:575,name:"老者纸拓",propMount:"groundPaper",anchorDx:0,anchorDy:0},
   {id:"city_memory_2",chapter:"city",kind:"memoryToken",index:2,x:16585,y:575,name:"归乡纸拓",propMount:"stoneStep",anchorDx:0,anchorDy:-3},
@@ -521,6 +525,7 @@ const CHAPTER_INTERACTABLES=[
   {id:"final_echo_2",chapter:"final",kind:"echo",index:2,x:18340,y:610,name:"高回声"},
   {id:"final_inscription",chapter:"final",kind:"clue",x:18450,y:552,name:"第七刻痕"},
   {id:"final_blank_tag",chapter:"final",kind:"flavor",x:18635,y:548,name:"烧白的空名签"},
+  {id:"echo_final_name",chapter:"final",kind:"echoMemory",x:18785,y:548,name:"镜后名字"},
   {id:"final_dial",chapter:"final",kind:"dial",x:18570,y:610,name:"七相转盘"},
   {id:"final_name_tablet",chapter:"final",kind:"nameTablet",x:18700,y:610,name:"归名牌"},
   {id:"final_crystal",chapter:"final",kind:"crystal",x:18910,y:610,name:"忆火晶石"},
@@ -568,7 +573,7 @@ function npcVisualFor(obj){
 
 function freshChapterProgress(){
   return {
-    story:{umbrellaRainTalked:false,umbrellaRainDeparting:false,umbrellaRainGone:false,umbrellaFerryTalked:false,umbrellaFerryGone:false,operaSingerIntroSeen:false,operaSingerClueSeen:false,operaSingerFarewellSeen:false,girlRainSeen:false,girlBossSeen:false,girlOperaSeen:false,girlBambooSeen:false,girlBambooHintSeen:false,girlFerrySeen:false,girlFerryHintSeen:false,girlCityTalked:false,girlCityDeparting:false,girlCityGone:false,girlCityHintSeen:false,girlFinalSeen:false,memoryFinds:[],memoryCompleteSeen:false},
+    story:{umbrellaRainTalked:false,umbrellaRainDeparting:false,umbrellaRainGone:false,umbrellaFerryTalked:false,umbrellaFerryGone:false,operaSingerIntroSeen:false,operaSingerClueSeen:false,operaSingerFarewellSeen:false,girlRainSeen:false,girlBossSeen:false,girlOperaSeen:false,girlBambooSeen:false,girlBambooHintSeen:false,girlFerrySeen:false,girlFerryHintSeen:false,girlCityTalked:false,girlCityDeparting:false,girlCityGone:false,girlCityHintSeen:false,girlFinalSeen:false,memoryFinds:[],memoryCompleteSeen:false,echoFinds:[],echoNpcSeen:[],echoCompleteSeen:false,echoTruthUnlocked:false},
     opera:{talked:false,clues:[],sequence:[],wrongAttempts:0,solved:false,liftRaised:false,liftProgress:0},
     bamboo:{talked:false,clues:[],tuned:[],wrongAttempts:0,reflectionSealed:false,solved:false},
     ferry:{talked:false,names:[],reflectionRevealed:false,debrisCleared:false,winchTurns:0,wrongAttempts:0,solved:false,boatProgress:0},
@@ -583,7 +588,7 @@ function mergeChapterProgress(saved){
   if(!saved||typeof saved!=="object")return base;
   for(const id of Object.keys(base)){
     if(saved[id]&&typeof saved[id]==="object")Object.assign(base[id],saved[id]);
-    for(const key of ["clues","sequence","names","epitaphs","tuned","assignments","echoSequence","memoryFinds"]){
+    for(const key of ["clues","sequence","names","epitaphs","tuned","assignments","echoSequence","memoryFinds","echoFinds","echoNpcSeen"]){
       if(key in base[id]&&!Array.isArray(base[id][key]))base[id][key]=[];
     }
     if(id==="city"){
@@ -1838,13 +1843,13 @@ function interact(){
 const INTERACTION_KIND_PRIORITY={
   memoryToken:6,nameSlip:6,nameReflection:5,debris:5,winch:5,lift:5,
   gong:5,bell:5,graveLantern:5,mirror:5,echo:5,dial:5,nameTablet:5,crystal:5,seal:5,
-  clue:4,epitaph:4,emptyGrave:4,npc:2,flavor:2
+  echoMemory:6,clue:4,epitaph:4,emptyGrave:4,npc:2,flavor:2
 };
 function chapterInteractionPriority(obj){return INTERACTION_KIND_PRIORITY[obj?.kind]||3;}
 function chapterInteractionRadius(obj){if(obj?.kind==="npc")return 108;const q=chapterInteractionPriority(obj);return q>=6?164:q>=5?154:q>=4?142:118;}
 function chapterInteractionCategory(obj){
   if(!obj)return "调查";
-  if(["memoryToken","nameSlip"].includes(obj.kind))return "拾取";
+  if(["memoryToken","nameSlip","echoMemory"].includes(obj.kind))return "拾取";
   if(obj.kind==="npc")return "交谈";
   if(["gong","bell","graveLantern","winch","lift","debris","mirror","echo","dial","crystal","seal"].includes(obj.kind))return "操作";
   return "调查";
@@ -1852,6 +1857,7 @@ function chapterInteractionCategory(obj){
 function chapterObjectNeedsAttention(obj,p){
   if(!obj||!p)return false;
   if(obj.id==="bamboo_pool"&&(p.tuned||[]).length===3&&!p.reflectionSealed)return true;
+  if(obj.kind==="echoMemory")return difficulty==="echo"&&!(world.chapterProgress.story.echoFinds||[]).includes(obj.id);
   if(obj.kind==="clue")return !(p.clues||[]).includes(obj.id)&&!(obj.id==="final_inscription"&&p.inscription);
   if(obj.kind==="epitaph")return !(p.epitaphs||[]).includes(obj.index);
   if(obj.kind==="memoryToken"||obj.kind==="nameSlip"||obj.kind==="nameReflection"||obj.kind==="debris")return true;
@@ -1962,6 +1968,10 @@ function chapterObjectVisible(obj){
   if(obj.id==="umbrella_rain")return !p.umbrellaRainGone;
   if(obj.id==="umbrella_ferry")return p.umbrellaRainTalked&&!p.umbrellaFerryGone;
   if(obj.id==="lantern_girl_city")return world.chapterProgress.city.epitaphs.length>=3&&!p.girlCityGone;
+  if(obj.kind==="echoMemory"){
+    const story=world.chapterProgress.story;
+    return difficulty==="echo"&&lampIsFocused()&&!(story.echoFinds||[]).includes(obj.id);
+  }
   if(obj.kind==="nameSlip"){
     if(p.names.includes(obj.index))return false;
     if(obj.index===1&&!p.reflectionRevealed)return false;
@@ -2366,6 +2376,7 @@ function interactionLabel(target){
     if(o.kind==="memoryToken")return `捧起${o.name}`;
     if(o.kind==="emptyGrave")return `查看${o.name}`;
     if(o.kind==="nameSlip")return `拾取${o.name}`;
+    if(o.kind==="echoMemory")return `照见${o.name}`;
     if(o.kind==="winch")return "转动渡口绞盘";
     if(o.kind==="nameReflection")return "观察水面墨影";
     if(o.kind==="debris")return "清理缠绳船骸";
