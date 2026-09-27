@@ -764,7 +764,7 @@ const world = {
 const player = {
   x:220,y:480,w:38,h:72,vx:0,vy:0,facing:1,grounded:false,
   health:100,maxHealth:100,invuln:0,hurtTimer:0,attack:null,attackCooldown:0,combo:0,lastAttack:0,
-  charging:false,chargeLevel:0,chargeCue:0,guarding:false,dodging:0,checkpointX:220,checkpointY:480,
+  charging:false,chargeLevel:0,chargeCue:0,guarding:false,dodging:0,dodgeDirection:-1,attackBuffer:0,attackBufferHeld:0,checkpointX:220,checkpointY:480,
   weapon:{type:"ruler",name:"裁魂尺",damage:16,range:78,color:"#c29a55",style:"ruler"},
   lampHeld:false,dead:false,deathTimer:0,deathPhase:'idle',deathVisualTimer:0,paperHurtFlash:0,interactTarget:null,interactCandidates:[],interactIndex:0,trail:[]
 };
@@ -1094,7 +1094,7 @@ function updateCamera(dt){
 }
 function resetPlayer(x=220,y=480){
   Object.assign(player,{x,y,vx:0,vy:0,health:100,invuln:0,hurtTimer:0,attack:null,attackCooldown:0,combo:0,
-    charging:false,chargeLevel:0,chargeCue:0,guarding:false,dodging:0,
+    charging:false,chargeLevel:0,chargeCue:0,guarding:false,dodging:0,dodgeDirection:-1,attackBuffer:0,attackBufferHeld:0,
     weapon:{type:"ruler",name:"裁魂尺",damage:16,range:78,color:"#c29a55",style:"ruler"},
     lampHeld:false,dead:false,deathTimer:0,deathPhase:'idle',deathVisualTimer:0,paperHurtFlash:0,interactCandidates:[],interactIndex:0});
   world.lamp.held=false;world.lamp.focused=false;world.lampAcquired=false;world.lamp.x=318;world.lamp.y=520;world.lamp.angle=0;world.lamp.facing=1;world.lamp.lit=true;
@@ -1427,8 +1427,16 @@ function giveWeapon(type="ruler"){
 }
 
 function startAttack(chargeInput=false){
-  if(player.attackCooldown>0||player.dead||currentDialogue||!player.grounded) return;
   const held=typeof chargeInput==="number"?chargeInput:(chargeInput?700:0);
+  if(player.dead||currentDialogue)return;
+  if(player.attack||player.attackCooldown>0||!player.grounded){
+    if(player.grounded&&!player.attack){
+      player.attackBuffer=Math.max(player.attackBuffer||0,.16);
+      player.attackBufferHeld=held;
+    }
+    return;
+  }
+  player.attackBuffer=0;player.attackBufferHeld=0;
   const tier=held>=800?2:held>=430?1:0, charged=tier>0;
   const now=gameTime,def=player.weapon||weaponDef(),ritual=def.type==="ritual";
   const comboWindow=ritual?.58:.45,comboMax=ritual?4:3;
@@ -2375,8 +2383,11 @@ function updateChapterMechanisms(dt){
 
 function updatePlayer(dt){
   if(player.dead){ updatePaperDeath(dt); return; }
-  player.invuln=Math.max(0,player.invuln-dt); player.hurtTimer=Math.max(0,(player.hurtTimer||0)-dt); player.attackCooldown=Math.max(0,player.attackCooldown-dt); player.dodging=Math.max(0,player.dodging-dt);
+  player.invuln=Math.max(0,player.invuln-dt); player.hurtTimer=Math.max(0,(player.hurtTimer||0)-dt); player.attackCooldown=Math.max(0,player.attackCooldown-dt); player.dodging=Math.max(0,player.dodging-dt); player.attackBuffer=Math.max(0,(player.attackBuffer||0)-dt);
   if(player.attack){ player.attack.time+=dt; processAttack(); if(player.attack.time>=player.attack.total) player.attack=null; }
+  if(!player.attack&&player.attackCooldown<=0&&(player.attackBuffer||0)>0&&player.grounded&&!player.charging){
+    const bufferedHeld=player.attackBufferHeld||0;player.attackBuffer=0;player.attackBufferHeld=0;startAttack(bufferedHeld);
+  }
   player.guarding=false;
   if(lampIsFocused()&&!player.attack){
     if(keys.w)world.lamp.angle=clamp(world.lamp.angle-dt*1.8,-1.05,1.05);
@@ -2389,7 +2400,7 @@ function updatePlayer(dt){
   if(move){ player.facing=move; const speed=player.dodging>0?430:lampIsFocused()?175:player.charging?78:220; player.vx=lerp(player.vx,move*speed,clamp(dt*12,0,1)); }
   else player.vx=lerp(player.vx,0,clamp(dt*(player.grounded?15:3),0,1));
   if(pressed.has("k")&&player.grounded){ if(player.lampHeld)setLampHeld(false); player.vy=-520; player.grounded=false; sound.jump(); }
-  if(player.dodging>0){ player.vx=player.facing*470; player.invuln=Math.max(player.invuln,.08); }
+  if(player.dodging>0){ player.vx=(player.dodgeDirection||-player.facing)*470; player.invuln=Math.max(player.invuln,.08); }
   player.vy+=1300*dt; player.vy=Math.min(player.vy,760);
   }
   // The ritual blade is a mobility weapon, not a faster copy of the ruler.
@@ -2509,7 +2520,7 @@ function updateEnemies(dt){
       const hitbox={x:dir>0?e.x+e.w-4:e.x-attackRange+4,y:e.y+6,w:attackRange,h:Math.max(28,e.h-8)};
       if(!e.attackDidHit&&hasLOS&&verticalDist<92&&rectsOverlap(hitbox,playerHurtbox)){damagePlayer(e.damage,dir);e.attackDidHit=true;}
       e.vx=dir*(e.type==="paper"?70:e.type==="elite"?95:82);
-      if(e.stateTimer<=0){e.aiState="RECOVERY";e.recoveryTotal=e.type==="elite" ? .32 : .24;e.stateTimer=e.recoveryTotal;e.vx*=.25;e.attackTimer=e.type==="paper"?1.55:e.type==="elite"?1.25:1.0;}
+      if(e.stateTimer<=0){e.aiState="RECOVERY";e.recoveryTotal=e.type==="paper"?.42:e.type==="elite"?.38:.30;e.stateTimer=e.recoveryTotal;e.vx*=.22;e.attackTimer=e.type==="paper"?1.60:e.type==="elite"?1.38:1.08;}
     }else if(e.aiState==="RECOVERY"){
       e.vx=lerp(e.vx,0,clamp(dt*12,0,1));
       if(e.stateTimer<=0)e.aiState=dist<520&&hasLOS?"CHASE":"IDLE";
@@ -2531,8 +2542,10 @@ function updateEnemies(dt){
 
         if(e.aiState==="CHASE"){
           const attackRange=e.type==="paper"?118:e.type==="elite"?108:88;
-          if(!bound&&dist<attackRange&&verticalDist<80&&hasLOS&&e.attackTimer<=0){
-            e.aiState="PREPARE_ATTACK";e.windupTotal=e.type==="paper" ? .42 : e.type==="elite" ? .36 : .28;e.stateTimer=e.windupTotal;e.windup=e.stateTimer;e.vx*=.2;
+          const activeAttackers=world.enemies.filter(other=>other!==e&&other.alive&&!other.inactive&&["PREPARE_ATTACK","ATTACK_ACTIVE"].includes(other.aiState)&&Math.abs((other.x+other.w*.5)-playerCx)<430).length;
+          const attackSlots=difficulty==="hard"?2:1;
+          if(!bound&&dist<attackRange&&verticalDist<80&&hasLOS&&e.attackTimer<=0&&activeAttackers<attackSlots){
+            e.aiState="PREPARE_ATTACK";e.windupTotal=e.type==="paper" ? .46 : e.type==="elite" ? .42 : .34;e.stateTimer=e.windupTotal;e.windup=e.stateTimer;e.vx*=.18;
           }else{
             const block=wallAhead(e,dir,12),edge=!groundAhead(e,dir,14,38);
             if(block||edge){e.aiState="BLOCKED";e.stateTimer=.28;e.vx=0;}
@@ -2621,7 +2634,7 @@ function beginBoss(){
     x:6470,y:350,w:330,h:225,hp:maxHp,maxHp,uiHp:maxHp,
     timer:1.2,windup:0,attackFlash:0,dash:0,dashTotal:.48,hurt:0,
     phase:1,lastPhase:1,pendingPhase:null,transitionFrom:1,transitionTo:1,
-    phaseTransition:0,phaseTransitionTotal:.46,lastAttackId:null,queuedAttackId:null,telegraphKind:null,telegraphDir:-1,telegraphTotal:0,attackRepeat:0,voiceTrial:false,voiceTrialDone:false,voiceProbe:[0,0,0],voiceRevealed:[false,false,false],voiceCorrect:1,voiceHitHint:false,voiceControlHintShown:false,storyBeats:new Set()
+    phaseTransition:0,phaseTransitionTotal:.46,lastAttackId:null,queuedAttackId:null,telegraphKind:null,telegraphLabel:"",telegraphDir:-1,telegraphTotal:0,attackRepeat:0,voiceTrial:false,voiceTrialDone:false,voiceProbe:[0,0,0],voiceRevealed:[false,false,false],voiceCorrect:1,voiceHitHint:false,voiceControlHintShown:false,storyBeats:new Set()
   };
   sound.boss(); shake=18; queueDialogue("百口灯妖",["阿——砚——", "这些声音里，有一个属于你。"]); showToast("首领：百口灯妖",3);
 }
@@ -2638,23 +2651,23 @@ function chooseBossAttack(b){
 }
 function bossAttackMeta(id){
   const table={
-    triple:{kind:"volley",windup:.58},wideTriple:{kind:"volley",windup:.66},
-    fan:{kind:"volley",windup:.52},fanWave:{kind:"ground",windup:.60},doubleWave:{kind:"ground",windup:.64},
-    dashVolley:{kind:"dash",windup:.34},rageFan:{kind:"volley",windup:.38},dashWave:{kind:"dash",windup:.40}
+    triple:{kind:"volley",windup:.62,label:"三口聚光"},wideTriple:{kind:"volley",windup:.70,label:"散口聚光"},
+    fan:{kind:"volley",windup:.58,label:"百口齐鸣"},fanWave:{kind:"ground",windup:.66,label:"灯声压地"},doubleWave:{kind:"ground",windup:.70,label:"双向灯潮"},
+    dashVolley:{kind:"dash",windup:.50,label:"黑灯扑身"},rageFan:{kind:"volley",windup:.48,label:"乱口追声"},dashWave:{kind:"dash",windup:.52,label:"黑灯踏浪"}
   };
-  return table[id]||{kind:"volley",windup:.52};
+  return table[id]||{kind:"volley",windup:.56,label:"灯口聚光"};
 }
 function queueBossAttack(b){
   if(b.queuedAttackId)return b.queuedAttackId;
   const id=chooseBossAttack(b),meta=bossAttackMeta(id);
-  b.queuedAttackId=id;b.telegraphKind=meta.kind;b.telegraphTotal=meta.windup;
+  b.queuedAttackId=id;b.telegraphKind=meta.kind;b.telegraphLabel=meta.label||"";b.telegraphTotal=meta.windup;
   b.telegraphDir=Math.sign(player.x-(b.x+b.w*.5))||-1;b.windup=meta.windup;
   return id;
 }
 
 function bossAttack(b){
   const attackId=b.queuedAttackId||chooseBossAttack(b);
-  b.lastAttackId=attackId;b.queuedAttackId=null;b.telegraphKind=null;
+  b.lastAttackId=attackId;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphLabel="";
   b.attackFlash=.32;shake=Math.max(shake,7);sound.play("boss_attack",{volume:.50});
   const origin={x:b.x+b.w*.5,y:b.y+(b.phase===1?96:b.phase===2?118:76)};
   const aim=Math.atan2((getPlayerHurtbox().y+getPlayerHurtbox().h*.5)-origin.y,(getPlayerHurtbox().x+getPlayerHurtbox().w*.5)-origin.x);
@@ -2703,7 +2716,7 @@ function updateBoss(dt){
   // the same frame that Phase 01 art disappeared.
   if(!b.pendingPhase&&desiredPhase!==b.phase){
     b.pendingPhase=desiredPhase;b.transitionFrom=b.phase;b.transitionTo=desiredPhase;
-    b.phaseTransition=b.phaseTransitionTotal||.46;b.windup=0;b.dash=0;b.timer=.55;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphTotal=0;
+    b.phaseTransition=b.phaseTransitionTotal||.46;b.windup=0;b.dash=0;b.timer=.55;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphLabel="";b.telegraphTotal=0;
     showToast(desiredPhase===2?"戏台展开，满城低语从灯幕后涌出":"灯幕伏地，黑灯开始追猎",2.4);
     window.AudioManager?.play('boss_phase_change',{volume:.42});
     if(desiredPhase===2){window.AudioManager?.play('gong_low',{volume:.22});window.AudioManager?.play('temple_bell_far',{volume:.18});}
@@ -2717,7 +2730,7 @@ function updateBoss(dt){
   if(b.phaseTransition>0){
     b.phaseTransition=Math.max(0,b.phaseTransition-dt);
     if(b.phaseTransition<=0&&b.pendingPhase){
-      b.phase=b.pendingPhase;b.lastPhase=b.phase;b.pendingPhase=null;b.timer=.62;b.windup=0;b.dash=0;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphTotal=0;
+      b.phase=b.pendingPhase;b.lastPhase=b.phase;b.pendingPhase=null;b.timer=.62;b.windup=0;b.dash=0;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphLabel="";b.telegraphLabel="";b.telegraphTotal=0;
       if(b.phase===2&&!b.voiceTrialDone){
         b.voiceTrial=true;b.voiceProbe=[0,0,0];b.voiceRevealed=[false,false,false];b.timer=999;
         bossNarrativeBeat(b,"voice_trial","“第七个。”");
@@ -2768,7 +2781,7 @@ function updateBoss(dt){
   b.timer-=dt;
   if(b.timer<=0){
     queueBossAttack(b);
-    b.timer=b.phase===1?2.45:b.phase===2?2.0:1.58;
+    b.timer=b.phase===1?2.50:b.phase===2?2.10:1.78;
   }
 }
 
@@ -2831,7 +2844,12 @@ function update(dt){
       showToast(world.lamp.focused?"引路灯已举起——W / S 可调整照射方向":"引路灯已收低");
     } else if(Math.hypot(player.x+20-world.lamp.x,player.y+34-world.lamp.y)<78){setLampHeld(true);sound.pickup();showToast("引路灯回应了你");}
   }
-  if(!world.epilogueActive&&pressed.has("j")&&!player.attack&&!window.Motion?.interacting()){player.charging=true;player.chargeLevel=0;player.chargeCue=0;jHoldStart=performance.now();}
+  if(!world.epilogueActive&&pressed.has("j")&&!window.Motion?.interacting()){
+    if(player.attack){
+      const ap=player.attack.time/Math.max(.001,player.attack.total);
+      if(ap>.42){player.attackBuffer=.20;player.attackBufferHeld=0;}
+    }else{player.charging=true;player.chargeLevel=0;player.chargeCue=0;jHoldStart=performance.now();}
+  }
   if(player.charging){
     const held=performance.now()-jHoldStart,next=held>=1000?2:held>=430?1:0;player.chargeLevel=next;
     if(next>player.chargeCue){player.chargeCue=next;sound.play("ruler_charge",{volume:next===2?.55:.38,rate:next===2?1.08:.92});createBurst(player.x+20,player.y+38,next===2?"#f4cf72":"#c85a42",next===2?10:6);}
@@ -2840,9 +2858,11 @@ function update(dt){
   if(!world.epilogueActive&&pressed.has("l")&&!player.dead){
     const attackProgress=player.attack?(player.attack.time/player.attack.total):1;
     const earlyThirdCancel=!!player.attack&&!player.attack.charged&&player.attack.step===3&&player.attack.time<=FIXED_DT*3.1;
-    const lateCancel=!player.attack||attackProgress>.65;
+    const cancelPoint=player.attack?.charged?.72:.55;
+    const lateCancel=!player.attack||attackProgress>cancelPoint;
     if(earlyThirdCancel||lateCancel){
-      player.attack=null;player.charging=false;player.dodging=.24;player.dodgeDirection=-player.facing;player.invuln=difficultyValues[difficulty].dodgeInvuln;sound.dodge();
+      const inputDir=(keys.a&&!keys.d)?-1:(keys.d&&!keys.a)?1:-player.facing;
+      player.attack=null;player.charging=false;player.attackBuffer=0;player.dodging=.24;player.dodgeDirection=inputDir;player.invuln=difficultyValues[difficulty].dodgeInvuln;sound.dodge();
     }
   }
   updateChapterMechanisms(dt);updatePlayer(dt);updateEpilogue(dt);
@@ -2944,7 +2964,11 @@ function drawEnemy(e){
   }else{
     ctx.fillStyle="#1c2729";ctx.beginPath();ctx.moveTo(x+30,y);ctx.lineTo(x+56,y+22);ctx.lineTo(x+52,y+82);ctx.lineTo(x+8,y+82);ctx.lineTo(x+4,y+22);ctx.closePath();ctx.fill();ctx.strokeStyle="#96836a";ctx.lineWidth=4;ctx.stroke();ctx.fillStyle="#a03930";ctx.fillRect(x+8,y+24,44,9);ctx.fillStyle="#e1c788";ctx.fillRect(x+18,y+12,6,5);ctx.fillRect(x+37,y+12,6,5);
   }
-  if(e.windup>0){ctx.strokeStyle="#c34b3d";ctx.lineWidth=2;ctx.beginPath();ctx.arc(x+e.w/2,y+e.h/2,e.w*.75+Math.sin(gameTime*18)*5,0,Math.PI*2);ctx.stroke();}
+  if(e.windup>0){
+    const q=clamp(1-e.windup/Math.max(.001,e.windupTotal||e.windup),0,1),cx=x+e.w/2,cy=y+e.h/2,dir=e.desiredDir||1;
+    ctx.strokeStyle=q>.72?"#f2b36c":"#c34b3d";ctx.lineWidth=2+q*1.2;ctx.beginPath();ctx.arc(cx,cy,e.w*(.88-.18*q),0,Math.PI*2);ctx.stroke();
+    ctx.globalAlpha=.35+.55*q;ctx.beginPath();ctx.moveTo(cx+dir*10,cy);ctx.lineTo(cx+dir*(34+18*q),cy);ctx.stroke();ctx.globalAlpha=1;
+  }
   if(e.hp<e.maxHp){ctx.fillStyle="#141414";ctx.fillRect(x,y-10,e.w,4);ctx.fillStyle="#a64035";ctx.fillRect(x,y-10,e.w*(e.hp/e.maxHp),4);}
   ctx.restore();
 }
@@ -3755,6 +3779,10 @@ function drawBossV2(){
       ctx.globalAlpha=.38+.50*tq;ctx.strokeStyle="#df7057";ctx.lineWidth=3.6;ctx.setLineDash([18,10]);ctx.beginPath();ctx.moveTo(start,gy);ctx.lineTo(end,gy);ctx.stroke();ctx.setLineDash([]);
       ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(end,gy);ctx.lineTo(end-dir*22,gy-11);ctx.moveTo(end,gy);ctx.lineTo(end-dir*22,gy+11);ctx.stroke();
       glow(start+dir*55,gy,76,"#d34f42",.12+.15*tq);
+    }
+    if(b.telegraphLabel&&tq>.12){
+      ctx.globalCompositeOperation="source-over";ctx.globalAlpha=.45+.45*tq;ctx.fillStyle="#f0c38b";ctx.font="600 12px 'Microsoft YaHei'";ctx.textAlign="center";
+      ctx.fillText(b.telegraphLabel,cx,Math.max(42,y-18));ctx.textAlign="left";
     }
     ctx.restore();
   }
