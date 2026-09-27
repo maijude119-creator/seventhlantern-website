@@ -1,0 +1,18 @@
+name: 无阴镇留言墙
+description: 留一句话给后来的人
+title: "[留言] "
+body:
+  - type: input
+    id: name
+    attributes:
+      label: 留名
+      description: 可以写昵称，也可以写“无名客”
+      placeholder: 无名客
+  - type: textarea
+    id: message
+    attributes:
+      label: 纸签内容
+      description: 留一句话给后来的人
+      placeholder: 灯还亮着，就继续往前。
+    validations:
+      required: true
