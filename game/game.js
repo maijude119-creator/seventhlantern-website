@@ -1180,6 +1180,11 @@ function startGame(diff="normal", fromSave=false, assetsConfirmed=false){
   if(fromSave){
     try{
       const save=loadBestSave();
+      if(!save){
+        state="menu";showPanel(menu);continueBtn.classList.add("hidden");
+        showToast("没有可恢复的有效存档，已取消继续游戏",2.8);
+        return;
+      }
       if(save){
         difficulty=save.difficulty||diff; buildWorld();
         let savedRegion=save.currentRegion||sceneRegionAt(save.checkpointX??save.x??220).id;
@@ -1252,8 +1257,8 @@ function saveGame(options={}){
     visitedRegions:Object.keys(world.visitedRegions).filter(k=>world.visitedRegions[k]),clueReactionSeen:Object.keys(world.clueReactionSeen||{}).filter(k=>world.clueReactionSeen[k]),npcRevealSeen:Object.keys(world.npcRevealSeen||{}).filter(k=>world.npcRevealSeen[k]),tutorialFlags:{...world.tutorialFlags}};
   try{
     const payload=JSON.stringify(data);
-    const previous=localStorage.getItem(SAVE_KEY);
-    if(parseSave(previous))localStorage.setItem(SAVE_BACKUP_KEY,previous);
+    const previous=localStorage.getItem(SAVE_KEY),previousParsed=parseSave(previous);
+    if(saveLooksUsable(previousParsed))localStorage.setItem(SAVE_BACKUP_KEY,previous);
     localStorage.setItem(SAVE_KEY,payload);
     continueBtn.classList.remove("hidden");
   }catch(_e){}
@@ -4513,9 +4518,12 @@ function clearTransientInputState(){
   jHoldStart=0;lHoldStart=0;lReleasedDuration=0;
   if(player){player.charging=false;player.chargeLevel=0;player.chargeCue=0;player.attackBuffer=0;player.attackBufferHeld=0;}
 }
+let lastSuspendSaveAt=0;
 function saveForSuspend(){
+  const now=Date.now();
+  if(now-lastSuspendSaveAt<500)return false;
   if((state==="playing"||state==="paused")&&world&&player&&!player.dead&&!world.epilogueActive&&state!=="ending"){
-    saveGame({resumeRegion:world.currentRegion});
+    lastSuspendSaveAt=now;saveGame({resumeRegion:world.currentRegion});
     return true;
   }
   return false;
