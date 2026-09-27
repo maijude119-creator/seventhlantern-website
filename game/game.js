@@ -642,7 +642,8 @@ function resumePointForRegion(id){return REGION_RESUME_POINTS[id]||REGION_RESUME
 function setProgressCheckpoint(regionId){
   const point=resumePointForRegion(regionId);
   const desiredFoot=(point.y??538)+player.h;
-  const ground=getGroundAt(point.x,desiredFoot-120,260)||getPrimaryGroundAt(point.x);
+  const nearby=getGroundCandidatesAt(point.x).filter(p=>Math.abs(p.y-desiredFoot)<=170).sort((a,b)=>Math.abs(a.y-desiredFoot)-Math.abs(b.y-desiredFoot));
+  const ground=nearby[0]||getPrimaryGroundAt(point.x);
   player.checkpointX=point.x;player.checkpointY=ground?ground.y-player.h:point.y;
   const lamp=world.checkpoints.find(c=>Math.abs(c.x-point.x)<12);if(lamp)lamp.lit=true;
 }
@@ -2985,7 +2986,7 @@ function update(dt){
     world.lamp.stable=lerp(world.lamp.stable,1,clamp(dt*4,0,1));
   }
   updateParticles(dt);
-  if(world.endingTimer>0){world.endingTimer-=dt;if(world.endingTimer<=0&&world.epilogueActive){world.epilogueActive=false;world.epilogueComplete=true;state="ending";try{localStorage.removeItem(SAVE_KEY);localStorage.removeItem(SAVE_BACKUP_KEY);}catch(_e){}}}
+  if(world.endingTimer>0){world.endingTimer-=dt;if(world.endingTimer<=0&&world.epilogueActive){world.epilogueActive=false;world.epilogueComplete=true;state="ending";try{localStorage.removeItem(SAVE_KEY);localStorage.removeItem(SAVE_BACKUP_KEY);continueBtn.classList.add("hidden");}catch(_e){}}}
   if(window.Motion)window.Motion.afterUpdate(dt);
   else {const target=clamp(player.x-W*.38,0,world.width-W);cameraX=lerp(cameraX,target,clamp(dt*4.5,0,1));}
   shake=Math.max(0,shake-dt*28); pressed.clear();released.clear();
@@ -4487,12 +4488,12 @@ window.addEventListener("keydown",e=>{
   if(!keys[k])pressed.add(k);keys[k]=true;
   if(k==="l"&&!lHoldStart)lHoldStart=performance.now();
   if(k==="e"&&currentDialogue){nextDialogue();pressed.delete("e");}
-  else if(k==="e"&&state==="ending"){state="menu";showPanel(menu);currentDialogue=null;dialogueEl.classList.remove("visible");}
+  else if(k==="e"&&state==="ending"){clearTransientInputState();state="menu";window.AudioManager?.stopEnvironment?.();sound.started=false;sound.ambienceRegion="";showPanel(menu);currentDialogue=null;dialogueEl.classList.remove("visible");}
 });
 window.addEventListener("keyup",e=>{const k=e.key.toLowerCase();keys[k]=false;released.add(k);if(k==="l"){lReleasedDuration=performance.now()-lHoldStart;lHoldStart=0;}});
-window.addEventListener("blur",()=>{for(const k in keys)keys[k]=false;if(state==="playing"){state="paused";showPanel(pausePanel);}});
+window.addEventListener("blur",()=>{clearTransientInputState();if(state==="playing"){state="paused";showPanel(pausePanel);}});
 
-document.getElementById("startBtn").onclick=()=>{sound.start();showPanel(difficultyPanel);};
+document.getElementById("startBtn").onclick=()=>{showPanel(difficultyPanel);};
 continueBtn.onclick=()=>ensureAssetsThenStart("normal",true);
 document.getElementById("helpBtn").onclick=()=>showPanel(helpPanel);
 document.getElementById("helpClose").onclick=()=>showPanel(menu);
@@ -4500,7 +4501,7 @@ document.getElementById("backBtn").onclick=()=>showPanel(menu);
 document.querySelectorAll("[data-difficulty]").forEach(b=>b.onclick=()=>ensureAssetsThenStart(b.dataset.difficulty));
 document.getElementById("resumeBtn").onclick=()=>{hidePanels();state="playing";lastTime=performance.now();fixedAccumulator=0;};
 document.getElementById("restartBtn").onclick=()=>{hidePanels();state="playing";respawn();};
-document.getElementById("quitBtn").onclick=()=>{state="menu";showPanel(menu);};
+document.getElementById("quitBtn").onclick=()=>{if(world&&player&&!player.dead)saveGame({resumeRegion:world.currentRegion});clearTransientInputState();state="menu";window.AudioManager?.stopEnvironment?.();sound.started=false;sound.ambienceRegion="";showPanel(menu);};
 document.getElementById("fullscreen").onclick=()=>{if(!document.fullscreenElement)document.getElementById("app").requestFullscreen?.();else document.exitFullscreen?.();};
 
 try{if(loadBestSave())continueBtn.classList.remove("hidden");}catch(_e){}
@@ -4510,7 +4511,6 @@ function clearTransientInputState(){
   jHoldStart=0;lHoldStart=0;lReleasedDuration=0;
   if(player){player.charging=false;player.chargeLevel=0;player.chargeCue=0;player.attackBuffer=0;player.attackBufferHeld=0;}
 }
-window.addEventListener("blur",clearTransientInputState);
 document.addEventListener("visibilitychange",()=>{if(document.hidden){clearTransientInputState();if(state==="playing"&&world&&player&&!player.dead)saveGame({resumeRegion:world.currentRegion});}});
 window.addEventListener("pagehide",()=>{clearTransientInputState();if(state==="playing"&&world&&player&&!player.dead)saveGame({resumeRegion:world.currentRegion});});
 window.addEventListener("resize",resizeGameViewport);
