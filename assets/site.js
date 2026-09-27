@@ -2,7 +2,18 @@
   const cfg=window.SEVENTH_LANTERN_CONFIG||{};
   document.querySelectorAll('[data-version]').forEach(el=>el.textContent=cfg.version||'v1.0.0');
   const header=document.querySelector('.site-header');
-  if(header) addEventListener('scroll',()=>header.classList.toggle('scrolled',scrollY>36),{passive:true});
+  const progressBar=document.getElementById('pageProgressBar');
+  const hero=document.querySelector('.hero');
+  const heroBg=document.querySelector('.hero-bg');
+  const heroFog=document.querySelector('.hero-fog');
+  const onScroll=()=>{
+    if(header)header.classList.toggle('scrolled',scrollY>36);
+    if(progressBar){const max=Math.max(1,document.documentElement.scrollHeight-innerHeight);progressBar.style.transform='scaleX('+Math.min(1,scrollY/max)+')';}
+    if(hero&&heroBg&&scrollY<innerHeight*1.25&&matchMedia('(prefers-reduced-motion: no-preference)').matches){
+      const y=Math.min(34,scrollY*.035);heroBg.style.transform='scale(1.035) translate3d(0,'+y+'px,0)';if(heroFog)heroFog.style.transform='translate3d(0,'+(y*.45)+'px,0)';
+    }
+  };
+  addEventListener('scroll',onScroll,{passive:true});onScroll();
   document.querySelectorAll('[data-site-build]').forEach(el=>el.textContent=cfg.siteBuild||'v1.6');
   const menuToggle=document.getElementById('menuToggle');
   const mainNav=document.getElementById('mainNav');
