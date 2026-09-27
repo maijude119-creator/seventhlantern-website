@@ -46,6 +46,12 @@
   function formatBytes(n){if(!n)return'--';const u=['B','KB','MB','GB'];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return`${n.toFixed(i>1?1:0)} ${u[i]}`}
   loadRelease();
 
+  const welcome=document.getElementById('playWelcome');
+  if(welcome){
+    if(localStorage.getItem('seventh-play-welcome')==='1') welcome.classList.add('hidden');
+    document.getElementById('enterGame')?.addEventListener('click',()=>{localStorage.setItem('seventh-play-welcome','1');welcome.classList.add('hidden');try{document.getElementById('gameFrame')?.contentWindow?.focus()}catch(_){}});
+  }
+
   const frame=document.getElementById('gameFrame');
   document.getElementById('fullscreenFrame')?.addEventListener('click',()=>{const el=document.querySelector('.game-shell');if(document.fullscreenElement)document.exitFullscreen();else el?.requestFullscreen?.()});
   let muted=false;document.getElementById('muteFrame')?.addEventListener('click',e=>{muted=!muted;e.currentTarget.textContent=muted?'取消静音':'静音';try{const w=frame.contentWindow;w?.AudioManager?.setMuted?.(muted);w?.eval?.(`if(window.AudioManager)AudioManager.setMuted?.(${muted})`)}catch(_){}});
