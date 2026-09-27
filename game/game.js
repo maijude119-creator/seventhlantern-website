@@ -707,45 +707,97 @@ function showPuzzleFailureHint(chapter,code,context={}){
 }
 
 class Sound {
-  constructor(){this.started=false;this.ambienceRegion="";this.stepTimer=0;}
-  start(){this.started=true;window.AudioManager?.setEnvironment(world?.currentRegion||"paperShop");}
+  constructor(){this.started=false;this.ambienceRegion="";this.stepTimer=0;this.accentTimer=7;}
+  start(){
+    this.started=true;this.ambienceRegion=world?.currentRegion||"paperShop";
+    this.accentTimer=6+Math.random()*6;window.AudioManager?.setEnvironment(this.ambienceRegion);
+  }
   play(name,opts){return window.AudioManager?.play(name,opts)||false;}
-  update(region,_dt){if(!this.started)return;this.ambienceRegion=region;window.AudioManager?.setEnvironment(region);}
+  duck(amount=.58,hold=.16,release=.5){window.AudioManager?.duckAmbience?.(amount,hold,release);}
+  update(region,dt){
+    if(!this.started)return;
+    if(region!==this.ambienceRegion){
+      this.ambienceRegion=region;this.accentTimer=5+Math.random()*7;window.AudioManager?.setEnvironment(region);
+    }
+    this.accentTimer-=dt;
+    if(this.accentTimer<=0&&!currentDialogue&&!world.bossActive&&!world.endingChoiceActive){
+      this.ambientAccent(region);this.accentTimer=10+Math.random()*11;
+    }
+  }
+  ambientAccent(region){
+    if(region==="opera")return this.play("gong_low",{volume:.045,rate:.72,cooldown:2});
+    if(region==="bamboo")return this.play("temple_bell_far",{volume:.05,rate:.80,cooldown:2});
+    if(region==="ferry")return this.play("temple_bell_far",{volume:.025,rate:.64,cooldown:2});
+    if(region==="city")return this.play("story_ghost",{volume:.032,rate:.72,cooldown:2});
+    if(region==="final")return this.play("boss_voice_whisper",{volume:.04,rate:.68,cooldown:2});
+    return false;
+  }
   tone(){return false;}
-  footstep(surface="stone"){
+  footstep(surface="stone",speed=180){
     const key=(surface==="wood"||surface==="opera")?"footstep_wood":surface==="mud"?"footstep_mud":"footstep_stone";
-    // One sample per surface is currently available; tiny deterministic-feeling pitch/level variance
-    // keeps repeated steps from sounding like the exact same file stamped every 0.2s.
-    return this.play(key,{volume:.34+Math.random()*.07,rate:.965+Math.random()*.07});
+    const q=Math.max(0,Math.min(1,(speed-55)/260));
+    return this.play(key,{volume:.27+q*.12+Math.random()*.025,rate:.95+q*.08+Math.random()*.025,cooldown:.045});
   }
   attack(combo=0){
+    const a=player?.attack;
     if(player?.weapon?.type==="ritual"){
-      const a=player.attack;const key=a?.kind==="ritual-thrust"?"ritual_thrust":a?.kind==="ritual-finish"?"ritual_finish":combo===2?"ritual_slash_2":"ritual_slash_1";
-      return this.play(key,{volume:.58});
+      if(a?.charged||a?.kind==="ritual-dash"){
+        this.duck(.76,.10,.34);
+        const ok=this.play("ritual_finish",{volume:.66,rate:.90});
+        this.play("ritual_slash_2",{volume:.18,rate:1.12,cooldown:0});
+        return ok;
+      }
+      const key=a?.kind==="ritual-thrust"?"ritual_thrust":a?.kind==="ritual-finish"?"ritual_finish":combo===2?"ritual_slash_2":"ritual_slash_1";
+      return this.play(key,{volume:a?.kind==="ritual-finish"?.64:.56,rate:.98+Math.random()*.035});
     }
-    return this.play(`ruler_swing_${Math.max(1,Math.min(3,combo||1))}`,{volume:.56});
+    if(a?.charged){
+      this.duck(.80,.08,.28);
+      return this.play("ruler_swing_3",{volume:.68,rate:a.tier===2?.86:.92});
+    }
+    const step=Math.max(1,Math.min(3,combo||1));
+    return this.play(`ruler_swing_${step}`,{volume:.50+step*.025,rate:.98+Math.random()*.035});
   }
-  hit(){return this.play(player?.weapon?.type==="ritual"?"ritual_cut_paper":"ruler_hit",{volume:.58});}
-  jump(){return this.play("jump",{volume:.34});}
-  land(){return this.play("land",{volume:.34});}
-  hurt(){return this.play("hurt",{volume:.5});}
-  dodge(){return this.play("dodge",{volume:.4});}
+  hit(heavy=false){
+    const ritual=player?.weapon?.type==="ritual";
+    if(heavy)this.duck(.78,.08,.30);
+    return this.play(ritual?"ritual_cut_paper":"ruler_hit",{volume:heavy?.66:.56,rate:heavy?.92:.98+Math.random()*.035});
+  }
+  jump(){return this.play("jump",{volume:.31,rate:.99+Math.random()*.025});}
+  land(fallSpeed=220,surface="stone"){
+    const q=Math.max(0,Math.min(1,(fallSpeed-140)/520));
+    const ok=this.play("land",{volume:.25+q*.20,rate:.97-q*.04});
+    if(q>.25){
+      const key=(surface==="wood"||surface==="opera")?"footstep_wood":surface==="mud"?"footstep_mud":"footstep_stone";
+      this.play(key,{volume:.10+q*.08,rate:.86+q*.06,cooldown:0});
+    }
+    if(q>.72)this.duck(.88,.05,.20);
+    return ok;
+  }
+  hurt(){this.duck(.67,.12,.42);return this.play("hurt",{volume:.53,rate:.96+Math.random()*.035});}
+  dodge(){return this.play("dodge",{volume:.38,rate:.98+Math.random()*.04});}
   lantern(kind="focus"){
     const key=kind==="raise"?"lantern_raise":kind==="lower"?"lantern_lower":kind==="unstable"?"lantern_unstable":"lantern_focus";
-    return this.play(key,{volume:.48});
+    return this.play(key,{volume:kind==="unstable"?.42:.45,rate:.99+Math.random()*.02});
   }
-  pickup(){return this.play("paper_pickup",{volume:.42});}
-  boss(){return this.play("boss_voice_whisper",{volume:.62});}
-  gong(index=0){return this.play(["gong_low","gong_mid","gong_high"][Math.max(0,Math.min(2,index))],{volume:.58});}
-  bell(index=0){return this.play(["temple_bell_near","temple_bell_mid","temple_bell_far"][Math.max(0,Math.min(2,index))],{volume:.52});}
-  winch(){return this.play("winch",{volume:.48});}
-  puzzle(){return this.play("grave_lantern",{volume:.42});}
-  checkpoint(){return this.play("grave_lantern",{volume:.45});}
-  seal(){return this.play("seal_open",{volume:.5});}
-  bossPhase(){return this.play("boss_phase_change",{volume:.58});}
-  bossMouth(){return this.play("boss_mouth_reveal",{volume:.5});}
-  bossHit(){return this.play("boss_hit",{volume:.56});}
-  bossDeath(){return this.play("boss_death",{volume:.68});}
+  pickup(){return this.play("paper_pickup",{volume:.40,rate:.98+Math.random()*.04});}
+  boss(){this.duck(.48,.55,.90);return this.play("boss_voice_whisper",{volume:.64,rate:.92});}
+  bossAttack(kind="volley"){
+    this.duck(.62,.18,.48);
+    const key=kind==="dash"?"boss_attack_dash":kind==="ground"?"boss_attack_ground":"boss_attack_volley";
+    const rate=kind==="dash"?1.06:kind==="ground"?.82:.96;
+    const volume=kind==="ground"?.40:kind==="dash"?.50:.44;
+    return this.play(key,{volume,rate,cooldown:.10});
+  }
+  gong(index=0){this.duck(.78,.18,.55);return this.play(["gong_low","gong_mid","gong_high"][Math.max(0,Math.min(2,index))],{volume:.56});}
+  bell(index=0){this.duck(.82,.12,.48);return this.play(["temple_bell_near","temple_bell_mid","temple_bell_far"][Math.max(0,Math.min(2,index))],{volume:.50});}
+  winch(){return this.play("winch",{volume:.46});}
+  puzzle(){return this.play("grave_lantern",{volume:.40,rate:1.02});}
+  checkpoint(){return this.play("grave_lantern",{volume:.43,rate:.96});}
+  seal(){this.duck(.74,.15,.50);return this.play("seal_open",{volume:.52});}
+  bossPhase(){this.duck(.38,.60,1.15);return this.play("boss_phase_change",{volume:.62,rate:.94});}
+  bossMouth(){this.duck(.72,.12,.40);return this.play("boss_mouth_reveal",{volume:.50});}
+  bossHit(heavy=false){if(heavy)this.duck(.72,.10,.34);return this.play("boss_hit",{volume:heavy?.64:.55,rate:heavy?.90:.98});}
+  bossDeath(){this.duck(.30,1.0,1.8);return this.play("boss_death",{volume:.72,rate:.94});}
 }
 const sound = new Sound();
 
