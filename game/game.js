@@ -1175,7 +1175,7 @@ function resetPlayer(x=220,y=480){
 
 function startGame(diff="normal", fromSave=false, assetsConfirmed=false){
   if(!assetsConfirmed&&!requiredAssetsReady()){ensureAssetsThenStart(diff,fromSave);return;}
-  sound.start(); difficulty=diff; dialogueQueue=[]; currentDialogue=null; dialogueEl.classList.remove("visible"); buildWorld(); resetPlayer();
+  difficulty=diff; dialogueQueue=[]; currentDialogue=null; dialogueEl.classList.remove("visible"); buildWorld(); resetPlayer();
   hidePanels(); state="playing";
   if(fromSave){
     try{
@@ -1227,12 +1227,14 @@ function startGame(diff="normal", fromSave=false, assetsConfirmed=false){
         restoreChapterRuntime();
         for(const c of world.checkpoints)c.lit=c.lit||c.x<=player.checkpointX+2;
         cameraX=clamp(player.x-W*.35,0,world.width-W);resetCameraRuntime();
+        sound.start();
         showToast("从上次点亮的存档灯继续");
         if(["opera","bamboo","ferry","city","final"].includes(savedRegion))showGuidance("上次停在这里",chapterObjective(savedRegion),"",4.4);
         return;
       }
     }catch(_e){}
   }
+  sound.start();
   showGuidance("纸身初醒","先靠近引路灯并按 E 唤醒，再调查屋内发光的线索","A / D 移动　E 互动",5.5);
   queueDialogue("旁白",["中元夜，无阴镇的六盏引魂灯同时熄灭了。", "雨声之外，整座镇子再没有别的声音。"]);
   setTimeout(()=>queueDialogue("阿砚",["师父不在……桌上似乎留下了什么。"]),900);
