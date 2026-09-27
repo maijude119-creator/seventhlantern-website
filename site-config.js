@@ -2,7 +2,7 @@
   title: "第7盏灯",
   author: "买橘的",
   version: "v1.0.0",
-  webGameVersion: "v1.1.0 RC1",
+  webGameVersion: "v5.0.0",
   siteBuild: "v1.8",
   releaseDate: "2026.09.27",
   download: {
