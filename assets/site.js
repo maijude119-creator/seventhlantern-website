@@ -255,5 +255,17 @@
   }
   monitorGameLoader();
   document.getElementById('fullscreenFrame')?.addEventListener('click',()=>{const el=document.querySelector('.game-shell');if(document.fullscreenElement)document.exitFullscreen();else el?.requestFullscreen?.()});
-  let muted=false;document.getElementById('muteFrame')?.addEventListener('click',e=>{muted=!muted;e.currentTarget.textContent=muted?'取消静音':'静音';try{const w=frame.contentWindow;w?.AudioManager?.setMuted?.(muted);w?.eval?.(`if(window.AudioManager)AudioManager.setMuted?.(${muted})`)}catch(_){}});
+  let muted=false,savedMaster=.88;
+  document.getElementById('muteFrame')?.addEventListener('click',e=>{
+    muted=!muted;e.currentTarget.innerHTML=muted?'<span>◖</span> 取消静音':'<span>◖</span> 静音';
+    e.currentTarget.setAttribute('aria-pressed',String(muted));
+    try{
+      const audio=frame?.contentWindow?.AudioManager;
+      if(audio?.getVolumes&&audio?.setVolumes){
+        const current=audio.getVolumes();
+        if(muted){savedMaster=Number.isFinite(current?.masterVolume)?current.masterVolume:savedMaster;audio.setVolumes({master:0});}
+        else audio.setVolumes({master:savedMaster});
+      }
+    }catch(_){}
+  });
 })();
