@@ -53,6 +53,30 @@
   }
 
   const frame=document.getElementById('gameFrame');
+  function monitorGameLoader(){
+    const loader=document.getElementById('gameLoader');if(!loader||!frame)return;
+    const bar=document.getElementById('loaderBar'),pct=document.getElementById('loaderPercent'),count=document.getElementById('loaderCount'),title=document.getElementById('loaderTitle'),desc=document.getElementById('loaderText'),retry=document.getElementById('retryGame');
+    let started=Date.now(),lastProgress=0,lastChange=Date.now(),done=false;
+    const fail=(message)=>{if(done)return;title.textContent='载入没有完成';desc.textContent=message;loader.classList.add('error');if(retry)retry.hidden=false;};
+    const poll=()=>{if(done)return;try{
+      const w=frame.contentWindow,st=w?.GameAssetStatus?.();
+      if(st&&st.total){
+        const progress=Math.max(0,Math.min(100,Math.round(st.loaded/st.total*100)));
+        if(bar)bar.style.width=progress+'%';
+        if(pct)pct.textContent=progress+'%';
+        if(count)count.textContent=st.loaded+' / '+st.total+' 项资源';
+        if(progress!==lastProgress){lastProgress=progress;lastChange=Date.now();}
+        if(st.failed>0){fail('有 '+st.failed+' 项资源加载失败。可以重新载入，或改用 Windows 完整版。');return;}
+        if(st.ready){done=true;if(bar)bar.style.width='100%';if(pct)pct.textContent='100%';if(count)count.textContent='资源准备完成';setTimeout(()=>loader.classList.add('hidden'),320);return;}
+      }else if(Date.now()-started>3500){if(count)count.textContent='正在等待游戏资源清单…';}
+      if(Date.now()-lastChange>25000){fail('网络似乎停住了。点击“重新载入”会重新请求游戏资源。');return;}
+    }catch(e){if(Date.now()-started>12000){fail('游戏页面没有正常回应。可能是浏览器缓存或网络问题。');return;}}
+    setTimeout(poll,180);};
+    frame.addEventListener('load',()=>{started=Date.now();lastChange=Date.now();setTimeout(poll,120)},{once:true});
+    setTimeout(poll,600);
+    retry?.addEventListener('click',()=>{retry.hidden=true;loader.classList.remove('error','hidden');title.textContent='重新载入无阴镇';desc.textContent='正在重新请求游戏脚本与美术资源……';if(bar)bar.style.width='0%';if(pct)pct.textContent='0%';if(count)count.textContent='重新连接中';started=Date.now();lastChange=Date.now();lastProgress=0;done=false;frame.src='/game/?reload='+Date.now();setTimeout(poll,800);});
+  }
+  monitorGameLoader();
   document.getElementById('fullscreenFrame')?.addEventListener('click',()=>{const el=document.querySelector('.game-shell');if(document.fullscreenElement)document.exitFullscreen();else el?.requestFullscreen?.()});
   let muted=false;document.getElementById('muteFrame')?.addEventListener('click',e=>{muted=!muted;e.currentTarget.textContent=muted?'取消静音':'静音';try{const w=frame.contentWindow;w?.AudioManager?.setMuted?.(muted);w?.eval?.(`if(window.AudioManager)AudioManager.setMuted?.(${muted})`)}catch(_){}});
 })();
