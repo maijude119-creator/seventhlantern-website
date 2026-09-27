@@ -242,3 +242,13 @@ body.nav-open{overflow:hidden}
   .image-missing-note{font-size:8px}
   .timeline-more button{width:100%}
 }
+
+
+/* website v2.0 mobile finish */
+.subhero-kicker{flex-wrap:wrap}
+@media(max-width:620px){
+  .subhero-kicker{gap:7px 9px;max-width:88%}
+  .subhero-kicker i{width:16px}
+  .feedback-panel,.guestbook-panel{padding:26px 20px}
+  .community-section{padding-bottom:96px}
+}
