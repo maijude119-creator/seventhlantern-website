@@ -17,7 +17,11 @@
       <p class="subtitle">灯照活人，影送亡魂。<br>但第七盏灯，不该被点亮。</p>
       <button id="startBtn">开始游戏</button>
       <button id="continueBtn" class="secondary hidden">继续上次旅程</button>
+      <button id="archiveBtn" class="secondary">旧事档案</button>
+      <button id="echoBtn" class="secondary hidden">回响模式</button>
+      <button id="settingsBtn" class="ghost">设置</button>
       <button id="helpBtn" class="ghost">操作说明</button>
+      <p class="build" id="buildLabel">WEB BUILD v5.0.0</p>
       <p class="foot">建议使用 Chrome / Edge，打开声音并佩戴耳机</p>
     </section>
 
@@ -54,7 +58,33 @@
       <h2>雨仍在下</h2>
       <button id="resumeBtn">继续</button>
       <button id="restartBtn" class="secondary">从存档灯重生</button>
+      <button id="pauseArchiveBtn" class="secondary">旧事档案</button>
+      <button id="pauseSettingsBtn" class="ghost">设置</button>
       <button id="quitBtn" class="ghost">返回标题</button>
+    </section>
+
+    <section id="settings" class="panel wide">
+      <p class="eyebrow">SETTINGS</p>
+      <h2>把无阴镇调成你舒服的样子</h2>
+      <div class="settings-grid">
+        <label><span>总音量</span><input id="masterVolume" type="range" min="0" max="100" step="1"><b id="masterVolumeValue">88</b></label>
+        <label><span>音效</span><input id="sfxVolume" type="range" min="0" max="100" step="1"><b id="sfxVolumeValue">86</b></label>
+        <label><span>环境音</span><input id="ambienceVolume" type="range" min="0" max="100" step="1"><b id="ambienceVolumeValue">58</b></label>
+        <label class="toggle-row"><span>镜头冲击</span><input id="screenShakeSetting" type="checkbox" checked></label>
+        <label class="toggle-row"><span>受击闪光</span><input id="flashSetting" type="checkbox" checked></label>
+        <label class="toggle-row"><span>迷路方向提示</span><input id="routeHintSetting" type="checkbox" checked></label>
+        <label class="toggle-row"><span>远景环境声点缀</span><input id="ambientAccentSetting" type="checkbox" checked></label>
+      </div>
+      <p class="hint">设置会自动保存在当前浏览器，不影响游戏存档。</p>
+      <button id="settingsClose">返回</button>
+    </section>
+
+    <section id="archive" class="panel wide archive-panel">
+      <p class="eyebrow">WUYIN ARCHIVE</p>
+      <h2>旧事档案</h2>
+      <div id="archiveSummary" class="archive-summary"></div>
+      <div id="archiveGrid" class="archive-grid"></div>
+      <button id="archiveClose">返回</button>
     </section>
 
     <div id="dialogue" class="dialogue">
