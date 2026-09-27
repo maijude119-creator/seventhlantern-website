@@ -1,0 +1,35 @@
+name: 游戏 Bug / 卡关反馈
+description: 公开提交可复现的问题，方便后续修复
+title: "[Bug] "
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: 问题类型
+      options:
+        - 卡关 / 无法继续
+        - 操作 / 战斗
+        - 画面 / 动画
+        - 声音
+        - 存档
+        - 在线试玩兼容性
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: 发生了什么
+      placeholder: 请描述你看到的问题
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 如何复现
+      placeholder: 例如：进入倒悬竹寺 → 敲第三钟 → 返回水面……
+  - type: input
+    id: browser
+    attributes:
+      label: 浏览器 / 系统
+      placeholder: Windows 11 + Chrome
