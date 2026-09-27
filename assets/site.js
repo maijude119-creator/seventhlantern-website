@@ -14,7 +14,7 @@
     }
   };
   addEventListener('scroll',onScroll,{passive:true});onScroll();
-  document.querySelectorAll('[data-site-build]').forEach(el=>el.textContent=cfg.siteBuild||'v1.6');
+  document.querySelectorAll('[data-site-build]').forEach(el=>el.textContent=cfg.siteBuild||'v1.8');
   const menuToggle=document.getElementById('menuToggle');
   const mainNav=document.getElementById('mainNav');
   if(menuToggle&&mainNav){
