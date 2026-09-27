@@ -2463,6 +2463,14 @@ const ENDING_CHOICES=[
   {id:"return",title:"归还六人的记忆",sub:"把借来的声音交还六盏灯，只留下自己后来走过的人生"},
   {id:"extinguish",title:"熄灭第七盏灯",sub:"终止以替身承接亡念的仪式，让无阴镇自己记住死者"}
 ];
+const ECHO_ENDING={id:"remember",title:"记住第七个人",sub:"不替灯决定谁该留下，而是承认每一次选择都由你亲手做出"};
+function hiddenEchoEndingUnlocked(){
+  const story=world?.chapterProgress?.story||{};
+  return difficulty==="echo"&&story.echoTruthUnlocked&&(story.echoFinds||[]).length>=5&&(story.memoryFinds||[]).length>=5;
+}
+function currentEndingChoices(){
+  return hiddenEchoEndingUnlocked()?[...ENDING_CHOICES,ECHO_ENDING]:ENDING_CHOICES;
+}
 function currentFinalShadow(){
   const p=world.chapterProgress?.final||{};return FINAL_SHADOWS[clamp(p.candidate||0,0,6)]||FINAL_SHADOWS[0];
 }
@@ -2477,10 +2485,10 @@ function finalEvidenceReady(p){
   const sh=currentFinalShadow();return p.candidate===6&&p.heardEcho&&p.readName&&p.reflectionSeen&&sh.oldName===""&&sh.voice===1&&finalLightMatches(sh);
 }
 function endingSubtitle(){
-  return world.finalChoice==="keep"?"名字留下":world.finalChoice==="return"?"记忆归灯":world.finalChoice==="extinguish"?"第七盏灯熄灭":"灯火未决";
+  return world.finalChoice==="keep"?"名字留下":world.finalChoice==="return"?"记忆归灯":world.finalChoice==="extinguish"?"第七盏灯熄灭":world.finalChoice==="remember"?"第七个人被记住":"灯火未决";
 }
 function endingFinalLine(){
-  return world.finalChoice==="keep"?"后来，镇里的人仍叫他阿砚。":world.finalChoice==="return"?"六盏灯各归其名，阿砚只带走自己的以后。":world.finalChoice==="extinguish"?"没有第七盏灯，天也会亮。":"";
+  return world.finalChoice==="keep"?"后来，镇里的人仍叫他阿砚。":world.finalChoice==="return"?"六盏灯各归其名，阿砚只带走自己的以后。":world.finalChoice==="extinguish"?"没有第七盏灯，天也会亮。":world.finalChoice==="remember"?"后来，无阴镇第一次把“选择的人”也写进了故事里。":"";
 }
 function recordRunCompletion(){
   mergeMetaFromRun();
@@ -2504,6 +2512,7 @@ function beginEpilogue(choiceId){
   sound.lantern();shake=10;impactFlash=.12;createBurst(19320,510,"#f3c46c",30);
   const lines=choiceId==="keep"?["名字是后来才有的。后来，也算我的一生。","六个人的记忆不会替我活下去，但我会记得他们来过。"]:
     choiceId==="return"?["我把不属于我的梦还给六盏灯。","阿砚这个名字留下，因为它已经被我自己叫过很多年。"]:
+    choiceId==="remember"?["我终于明白，灯一直在替所有人保存答案。","可这一次，不把答案交给灯。把做出选择的人也记下来。","如果你还能听见我——谢谢你第二次走到这里。"]:
     ["如果第七盏灯只能靠另一个替身继续亮，那就让它在这里停下。","死人应该被记住，不该被复制。活人也不该替谁成为容器。"];
   queueDialogue("阿砚",lines);
 }
@@ -2518,6 +2527,7 @@ function updateEpilogue(dt){
     world.epilogueBeat=4;
     const lines=world.finalChoice==="keep"?["伞下的位置空着。远处戏楼只响了一声锣。","天没有立刻亮，但这一次，影子跟上了我的脚步。"]:
       world.finalChoice==="return"?["雨巷里那些借来的声音安静下来。","我仍然记得他们的名字，只是不再从我的梦里醒来。"]:
+      world.finalChoice==="remember"?["雨巷尽头多了一张从没见过的纸签。","上面没有写阿砚，也没有写任何亡者。只写着：『来过两次的人。』"]:
       ["一路上的灯一盏盏暗下去，窗里却第一次有人自己点起了火。","没有第七盏灯以后，无阴镇还是得学会记住自己的死人。"];
     queueDialogue("阿砚",lines);world.endingTimer=1.2;
   }
@@ -3100,9 +3110,11 @@ function update(dt){
   runStats.playMs=(runStats.playMs||0)+dt*1000;
   if(world.endingChoiceActive){
     if(pressed.has("escape")){world.endingChoiceActive=false;showToast("第七盏灯仍在等你",1.8);}
-    if(pressed.has("a")||pressed.has("w")){world.endingChoiceIndex=(world.endingChoiceIndex+ENDING_CHOICES.length-1)%ENDING_CHOICES.length;sound.play("ui_select",{volume:.18});}
-    if(pressed.has("d")||pressed.has("s")){world.endingChoiceIndex=(world.endingChoiceIndex+1)%ENDING_CHOICES.length;sound.play("ui_select",{volume:.18});}
-    if(pressed.has("e")){const choice=ENDING_CHOICES[world.endingChoiceIndex];beginEpilogue(choice.id);}
+    const endingChoices=currentEndingChoices();
+    if(world.endingChoiceIndex>=endingChoices.length)world.endingChoiceIndex=0;
+    if(pressed.has("a")||pressed.has("w")){world.endingChoiceIndex=(world.endingChoiceIndex+endingChoices.length-1)%endingChoices.length;sound.play("ui_select",{volume:.18});}
+    if(pressed.has("d")||pressed.has("s")){world.endingChoiceIndex=(world.endingChoiceIndex+1)%endingChoices.length;sound.play("ui_select",{volume:.18});}
+    if(pressed.has("e")){const choice=endingChoices[world.endingChoiceIndex];beginEpilogue(choice.id);}
     pressed.clear();released.clear();return;
   }
   if(pressed.has("escape")){ saveForSuspend();clearTransientInputState();state="paused";showPanel(pausePanel);return; }
@@ -4477,9 +4489,9 @@ function drawEpilogueVisuals(){
 function drawEndingChoiceOverlay(){
   if(!world.endingChoiceActive)return;
   ctx.save();ctx.fillStyle="rgba(3,6,8,.76)";ctx.fillRect(0,0,W,H);
-  const x=W/2-350,y=116,w=700,h=452;ctx.fillStyle="#071014ef";roundedRect(x,y,w,h,12);ctx.fill();ctx.strokeStyle="#8e724f";ctx.lineWidth=1.5;ctx.stroke();
-  ctx.textAlign="center";ctx.fillStyle="#e1d4ba";ctx.font="700 28px serif";ctx.fillText("第七盏灯没有给出答案",W/2,y+48);ctx.fillStyle="#aaa79d";ctx.font="13px 'Microsoft YaHei',sans-serif";ctx.fillText("它只把最后的决定交回你手里",W/2,y+76);
-  ENDING_CHOICES.forEach((c,i)=>{const cy=y+108+i*94,sel=i===world.endingChoiceIndex;ctx.fillStyle=sel?"rgba(111,80,47,.42)":"rgba(18,25,27,.72)";roundedRect(x+38,cy,w-76,74,8);ctx.fill();ctx.strokeStyle=sel?"#d3a85f":"#4d514c";ctx.lineWidth=sel?2:1;ctx.stroke();ctx.textAlign="left";ctx.fillStyle=sel?"#f0d39a":"#d0c6b3";ctx.font="700 17px 'Microsoft YaHei',sans-serif";ctx.fillText(c.title,x+58,cy+28);ctx.fillStyle="#aaa79d";ctx.font="12px 'Microsoft YaHei',sans-serif";ctx.fillText(c.sub,x+58,cy+52);});
+  const choices=currentEndingChoices(),x=W/2-350,y=choices.length>3?72:116,w=700,h=choices.length>3?566:452,rowGap=choices.length>3?88:94;ctx.fillStyle="#071014ef";roundedRect(x,y,w,h,12);ctx.fill();ctx.strokeStyle="#8e724f";ctx.lineWidth=1.5;ctx.stroke();
+  ctx.textAlign="center";ctx.fillStyle="#e1d4ba";ctx.font="700 28px serif";ctx.fillText("第七盏灯没有给出答案",W/2,y+48);ctx.fillStyle="#aaa79d";ctx.font="13px 'Microsoft YaHei',sans-serif";ctx.fillText(hiddenEchoEndingUnlocked()?"这一次，它连做出选择的人也照了出来":"它只把最后的决定交回你手里",W/2,y+76);
+  choices.forEach((choice,i)=>{const cy=y+108+i*rowGap,sel=i===world.endingChoiceIndex;ctx.fillStyle=sel?"rgba(111,80,47,.42)":"rgba(18,25,27,.72)";roundedRect(x+38,cy,w-76,74,8);ctx.fill();ctx.strokeStyle=choice.id==="remember"?"#a65a7b":sel?"#d3a85f":"#4d514c";ctx.lineWidth=sel?2:1;ctx.stroke();ctx.textAlign="left";ctx.fillStyle=choice.id==="remember"?"#e5bfd0":sel?"#f0d39a":"#d0c6b3";ctx.font="700 17px 'Microsoft YaHei',sans-serif";ctx.fillText(choice.title,x+58,cy+28);ctx.fillStyle="#aaa79d";ctx.font="12px 'Microsoft YaHei',sans-serif";ctx.fillText(choice.sub,x+58,cy+52);});
   ctx.textAlign="center";ctx.fillStyle="#918e84";ctx.font="12px 'Microsoft YaHei',sans-serif";ctx.fillText("W / S 或 A / D 选择　·　E 确认　·　Esc 暂不决定",W/2,y+h-24);ctx.restore();
 }
 
