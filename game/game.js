@@ -2077,9 +2077,14 @@ function collectEchoTrace(id,title,lines){
   queueDialogue(title,lines);
   if(first&&story.echoFinds.length>=5&&!story.echoCompleteSeen){
     story.echoCompleteSeen=true;story.echoTruthUnlocked=true;
+    const memories=new Set([...(metaProgress.memoryFinds||[]),...(story.memoryFinds||[])]);
     queueDialogue("阿砚",["这些不是第一次留下的痕迹。","有人走过和我一样的路，做过和我一样的选择。"]);
     queueDialogue("无名客",["不是别人。是无阴镇记得你上一次怎么离开。"]);
-    showGuidance("回响真相","五处回响已经拼合。终章会出现一条一周目看不到的选择。","",4.6);
+    if(memories.size>=5){
+      showGuidance("回响真相","五处回响与五段旧事已经拼合。终章会出现一条一周目看不到的选择。","",4.8);
+    }else{
+      showGuidance("回响真相",`回响已经齐了，但旧事残片仍是 ${memories.size}/5。隐藏选择还缺那几段被忘掉的旧事。`,"",4.8);
+    }
   }
   saveGame({resumeRegion:world.currentRegion});return true;
 }
@@ -4590,7 +4595,9 @@ function drawObjectiveTalismanHUD(objective){
   drawPaperTag(o.x,o.y,o.w,o.h,"rgba(210,190,127,.90)","#73583a");
   ctx.fillStyle="#8d3029";ctx.fillRect(o.x+12,o.y+10,4,o.h-20);
   ctx.fillStyle="#3a3028";ctx.font="700 12px 'Microsoft YaHei',sans-serif";ctx.fillText("今夜所向",o.x+27,o.y+22);
-  ctx.fillStyle="#665544";ctx.font="9px 'Microsoft YaHei',sans-serif";ctx.textAlign="right";ctx.fillText(`${status.mode} · 引魂 ${status.recovered}/${status.total}`,o.x+o.w-22,o.y+22);ctx.textAlign="left";
+  ctx.fillStyle="#665544";ctx.font="9px 'Microsoft YaHei',sans-serif";ctx.textAlign="right";
+  const echoCount=difficulty==="echo"?(world.chapterProgress?.story?.echoFinds||[]).length:null;
+  ctx.fillText(echoCount===null?`${status.mode} · 引魂 ${status.recovered}/${status.total}`:`${status.mode} · 引魂 ${status.recovered}/${status.total} · 回响 ${echoCount}/5`,o.x+o.w-22,o.y+22);ctx.textAlign="left";
   // Six restrained lamp dots make recovery progress readable without a second black status panel.
   for(let i=0;i<status.total;i++){const px=o.x+o.w-76+i*9,py=o.y+32;if(i<status.recovered)glow(px,py,7,"#ffc85e",.15);ctx.fillStyle=i<status.recovered?"#b44a31":"#89775d";ctx.beginPath();ctx.arc(px,py,2.3,0,Math.PI*2);ctx.fill();}
   ctx.fillStyle="#54483b";ctx.font="11px 'Microsoft YaHei',sans-serif";const text=String(objective||"继续探索"),max=o.w-40;
