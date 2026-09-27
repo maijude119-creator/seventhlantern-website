@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="assets/site.css" />
 </head>
 <body data-page="home"><div class="page-progress" aria-hidden="true"><i id="pageProgressBar"></i></div>
-  <div id="intro" class="intro" aria-hidden="true">
+  <div id="intro" class="intro" role="dialog" aria-label="第7盏灯开场">
     <div class="intro-rain"></div>
     <div class="intro-lantern" aria-hidden="true"><span></span></div>
     <p>残灯不灭 · 故人未远</p>
@@ -43,13 +43,13 @@
       <div class="hero-copy reveal">
         <p class="eyebrow">中式怪谈 · 横版剧情解谜</p>
         <p class="hero-en">THE SEVENTH LANTERN</p>
-        <div class="release-status"><span class="live-dot"></span><strong>Web 正式开放</strong><span data-web-version>v5.1.0</span><span>Windows v1.0.0</span></div>
+        <div class="release-status"><span class="live-dot"></span><strong>Web 正式开放</strong><span data-web-version>v5.1.0</span><span>Windows <span data-win-version>v1.0.0</span></span></div>
         <h1><span>第</span><em>7</em><span>盏灯</span></h1>
         <h2>六盏灯灭后，<strong>第七盏灯</strong>为何还亮着？</h2>
         <p class="hero-desc">提灯探索无阴镇，在雨巷、戏楼、竹寺、古渡与纸城之间，解开机关、直面怪物，也一步步照见自己的来处。</p>
         <div class="hero-actions">
           <a class="button primary" href="/play"><span>在线试玩</span><small>完整网页游玩</small></a>
-          <a class="button secondary" href="/download"><span>下载游戏</span><small>Windows v1.0.0</small></a>
+          <a class="button secondary" href="/download"><span>下载游戏</span><small>Windows <span data-win-version>v1.0.0</span></small></a>
         </div>
         <div class="meta-line"><span>Web <b data-web-version>v5.1.0</b></span><i></i><span>作者 买橘的</span><i></i><span>独立游戏</span></div>
         <div class="hero-facts"><span>单人剧情</span><span>键盘操作</span><span>Web / Windows</span><span>本地存档</span></div>
@@ -66,7 +66,7 @@
 
     <section class="quick-strip" aria-label="游戏快速信息">
       <div><b>WEB</b><span>浏览器完整试玩</span></div>
-      <div><b>WIN</b><span>Windows v1.0.0 下载</span></div>
+      <div><b>WIN</b><span>Windows <span data-win-version>v1.0.0</span> 下载</span></div>
       <div><b>6</b><span>雨巷至第七灯域</span></div>
       <div><b>LOCAL</b><span>浏览器本地存档</span></div>
     </section>
@@ -96,17 +96,17 @@
       </div>
       <div class="feature-grid">
         <article class="feature-card reveal">
-          <img src="assets/images/explore.webp" alt="提灯探索游戏场景" />
+          <img loading="lazy" decoding="async" src="assets/images/explore.webp" alt="提灯探索游戏场景" />
           <div class="feature-overlay"></div>
           <div class="feature-copy"><b>01</b><h3>探索</h3><p>提灯穿过雨夜与幽都，寻找隐藏路径、NPC和散落的线索。</p></div>
         </article>
         <article class="feature-card reveal">
-          <img src="assets/images/puzzle.webp" alt="机关解谜游戏场景" />
+          <img loading="lazy" decoding="async" src="assets/images/puzzle.webp" alt="机关解谜游戏场景" />
           <div class="feature-overlay"></div>
           <div class="feature-copy"><b>02</b><h3>解谜</h3><p>照见、定影、移灯。每个谜题都建立在同一套灯火规则上。</p></div>
         </article>
         <article class="feature-card reveal">
-          <img src="assets/images/combat.webp" alt="怪物战斗游戏场景" />
+          <img loading="lazy" decoding="async" src="assets/images/combat.webp" alt="怪物战斗游戏场景" />
           <div class="feature-overlay"></div>
           <div class="feature-copy"><b>03</b><h3>战斗</h3><p>裁魂尺三段连击、祭刃切断规则，在怪物攻击预兆中找出破局时机。</p></div>
         </article>
@@ -129,11 +129,11 @@
     <section class="section world-section" id="world">
       <div class="section-heading reveal"><p class="eyebrow">THE JOURNEY</p><h2>从雨夜走到<span>第七灯域</span></h2><p>每个场景不是换皮关卡，而是阿砚追索身份真相的一段证据。</p></div>
       <div class="world-track" id="worldTrack">
-        <article class="world-card active" data-name="无面戏楼"><img src="assets/images/world-opera.webp" alt="无面戏楼" /><div><small>第一幕</small><h3>无面戏楼</h3><p>锣声、戏单与无脸的旧角色。</p></div></article>
-        <article class="world-card" data-name="倒悬竹寺"><img src="assets/images/world-bamboo.webp" alt="倒悬竹寺" /><div><small>第二幕</small><h3>倒悬竹寺</h3><p>钟声倒置，水面记住另一个方向。</p></div></article>
-        <article class="world-card" data-name="逆流古渡"><img src="assets/images/world-ferry.webp" alt="逆流古渡" /><div><small>第三幕</small><h3>逆流古渡</h3><p>名签泡在水里，倒影先于名字开口。</p></div></article>
-        <article class="world-card" data-name="幽都纸城"><img src="assets/images/world-city.webp" alt="幽都纸城" /><div><small>第四幕</small><h3>幽都纸城</h3><p>墓灯与纸拓，替失去名字的人归位。</p></div></article>
-        <article class="world-card" data-name="第七灯域"><img src="assets/images/world-final.webp" alt="第七灯域" /><div><small>终幕</small><h3>第七灯域</h3><p>影、声、名、位最终落向同一个人。</p></div></article>
+        <article class="world-card active" data-name="无面戏楼"><img loading="lazy" decoding="async" src="assets/images/world-opera.webp" alt="无面戏楼" /><div><small>第一幕</small><h3>无面戏楼</h3><p>锣声、戏单与无脸的旧角色。</p></div></article>
+        <article class="world-card" data-name="倒悬竹寺"><img loading="lazy" decoding="async" src="assets/images/world-bamboo.webp" alt="倒悬竹寺" /><div><small>第二幕</small><h3>倒悬竹寺</h3><p>钟声倒置，水面记住另一个方向。</p></div></article>
+        <article class="world-card" data-name="逆流古渡"><img loading="lazy" decoding="async" src="assets/images/world-ferry.webp" alt="逆流古渡" /><div><small>第三幕</small><h3>逆流古渡</h3><p>名签泡在水里，倒影先于名字开口。</p></div></article>
+        <article class="world-card" data-name="幽都纸城"><img loading="lazy" decoding="async" src="assets/images/world-city.webp" alt="幽都纸城" /><div><small>第四幕</small><h3>幽都纸城</h3><p>墓灯与纸拓，替失去名字的人归位。</p></div></article>
+        <article class="world-card" data-name="第七灯域"><img loading="lazy" decoding="async" src="assets/images/world-final.webp" alt="第七灯域" /><div><small>终幕</small><h3>第七灯域</h3><p>影、声、名、位最终落向同一个人。</p></div></article>
       </div>
       <div class="world-dots" id="worldDots"></div>
     </section>
@@ -145,23 +145,23 @@
         <p>点击任意画面可以放大查看。探索、机关、战斗与终章场景都来自当前游戏官网版本。</p>
       </div>
       <div class="media-grid">
-        <button class="media-shot media-shot-wide reveal" data-full="assets/images/explore.webp" data-caption="雨夜探索 · 提灯穿过无阴镇"><img src="assets/images/explore.webp" alt="雨夜探索实机画面"><span>雨夜探索</span></button>
-        <button class="media-shot reveal" data-full="assets/images/puzzle.webp" data-caption="机关解谜 · 灯光也是规则的一部分"><img src="assets/images/puzzle.webp" alt="机关解谜实机画面"><span>机关解谜</span></button>
-        <button class="media-shot reveal" data-full="assets/images/combat.webp" data-caption="战斗 · 读懂怪物攻击预兆"><img src="assets/images/combat.webp" alt="战斗实机画面"><span>战斗</span></button>
-        <button class="media-shot reveal" data-full="assets/images/world-opera.webp" data-caption="无面戏楼"><img src="assets/images/world-opera.webp" alt="无面戏楼"><span>无面戏楼</span></button>
-        <button class="media-shot reveal" data-full="assets/images/world-ferry.webp" data-caption="逆流古渡"><img src="assets/images/world-ferry.webp" alt="逆流古渡"><span>逆流古渡</span></button>
-        <button class="media-shot media-shot-wide reveal" data-full="assets/images/world-final.webp" data-caption="第七灯域"><img src="assets/images/world-final.webp" alt="第七灯域"><span>第七灯域</span></button>
+        <button class="media-shot media-shot-wide reveal" data-full="assets/images/explore.webp" data-caption="雨夜探索 · 提灯穿过无阴镇"><img loading="lazy" decoding="async" src="assets/images/explore.webp" alt="雨夜探索实机画面"><span>雨夜探索</span></button>
+        <button class="media-shot reveal" data-full="assets/images/puzzle.webp" data-caption="机关解谜 · 灯光也是规则的一部分"><img loading="lazy" decoding="async" src="assets/images/puzzle.webp" alt="机关解谜实机画面"><span>机关解谜</span></button>
+        <button class="media-shot reveal" data-full="assets/images/combat.webp" data-caption="战斗 · 读懂怪物攻击预兆"><img loading="lazy" decoding="async" src="assets/images/combat.webp" alt="战斗实机画面"><span>战斗</span></button>
+        <button class="media-shot reveal" data-full="assets/images/world-opera.webp" data-caption="无面戏楼"><img loading="lazy" decoding="async" src="assets/images/world-opera.webp" alt="无面戏楼"><span>无面戏楼</span></button>
+        <button class="media-shot reveal" data-full="assets/images/world-ferry.webp" data-caption="逆流古渡"><img loading="lazy" decoding="async" src="assets/images/world-ferry.webp" alt="逆流古渡"><span>逆流古渡</span></button>
+        <button class="media-shot media-shot-wide reveal" data-full="assets/images/world-final.webp" data-caption="第七灯域"><img loading="lazy" decoding="async" src="assets/images/world-final.webp" alt="第七灯域"><span>第七灯域</span></button>
       </div>
     </section>
 
     <section class="section cast-section" id="cast">
       <div class="section-heading reveal"><p class="eyebrow">WHO YOU MEET</p><h2>遇见人，遇见鬼，也遇见<span>自己</span></h2></div>
       <div class="cast-grid">
-        <article class="cast-card reveal"><img src="assets/images/char-ayan.webp" alt="阿砚" /><div><small>主角</small><h3>阿砚</h3><p>纸扎铺学徒。第七盏灯维持着他的存在。</p></div></article>
-        <article class="cast-card reveal"><img src="assets/images/char-shenpo.webp" alt="沈婆" /><div><small>NPC</small><h3>沈婆</h3><p>把阿砚养大的人，也比谁都更早知道灯的秘密。</p></div></article>
-        <article class="cast-card reveal"><img src="assets/images/char-nameless.webp" alt="无名客" /><div><small>NPC</small><h3>无名客</h3><p>被剥离的影，在不同地点等着阿砚追上。</p></div></article>
-        <article class="cast-card reveal"><img src="assets/images/char-paper.webp" alt="纸扎怪" /><div><small>怪物</small><h3>纸扎怪</h3><p>纸身被怨念牵动，攻击前会留下可读的预兆。</p></div></article>
-        <article class="cast-card boss reveal"><img src="assets/images/char-boss.webp" alt="百口灯妖" /><div><small>BOSS</small><h3>百口灯妖</h3><p>灯火、口舌与被遗忘的名字缠成的巨大怪物。</p></div></article>
+        <article class="cast-card reveal"><img loading="lazy" decoding="async" src="assets/images/char-ayan.webp" alt="阿砚" /><div><small>主角</small><h3>阿砚</h3><p>纸扎铺学徒。第七盏灯维持着他的存在。</p></div></article>
+        <article class="cast-card reveal"><img loading="lazy" decoding="async" src="assets/images/char-shenpo.webp" alt="沈婆" /><div><small>NPC</small><h3>沈婆</h3><p>把阿砚养大的人，也比谁都更早知道灯的秘密。</p></div></article>
+        <article class="cast-card reveal"><img loading="lazy" decoding="async" src="assets/images/char-nameless.webp" alt="无名客" /><div><small>NPC</small><h3>无名客</h3><p>被剥离的影，在不同地点等着阿砚追上。</p></div></article>
+        <article class="cast-card reveal"><img loading="lazy" decoding="async" src="assets/images/char-paper.webp" alt="纸扎怪" /><div><small>怪物</small><h3>纸扎怪</h3><p>纸身被怨念牵动，攻击前会留下可读的预兆。</p></div></article>
+        <article class="cast-card boss reveal"><img loading="lazy" decoding="async" src="assets/images/char-boss.webp" alt="百口灯妖" /><div><small>BOSS</small><h3>百口灯妖</h3><p>灯火、口舌与被遗忘的名字缠成的巨大怪物。</p></div></article>
       </div>
     </section>
 
@@ -178,7 +178,7 @@
         <p class="eyebrow">ENTER WUYIN</p>
         <h2>灯还亮着，<br>就亲自走进去。</h2>
         <p>无需注册即可在线试玩；也可以下载 Windows 完整版保存到本地。</p>
-        <div class="final-cta-actions"><a class="button primary" href="/play"><span>进入无阴镇</span><small>Web · 在线试玩</small></a><a class="button secondary" href="/download"><span>下载完整版</span><small>Windows v1.0.0</small></a></div>
+        <div class="final-cta-actions"><a class="button primary" href="/play"><span>进入无阴镇</span><small>Web · 在线试玩</small></a><a class="button secondary" href="/download"><span>下载完整版</span><small>Windows <span data-win-version>v1.0.0</span></small></a></div>
       </div>
     </section>
 
@@ -210,7 +210,7 @@
   <div class="media-lightbox" id="mediaLightbox" aria-hidden="true">
     <button class="lightbox-close" id="lightboxClose" type="button" aria-label="关闭图片">×</button>
     <button class="lightbox-backdrop" id="lightboxBackdrop" type="button" aria-label="关闭图片"></button>
-    <figure><img id="lightboxImage" src="" alt=""><figcaption id="lightboxCaption"></figcaption></figure>
+    <figure><img loading="lazy" decoding="async" id="lightboxImage" src="" alt=""><figcaption id="lightboxCaption"></figcaption></figure>
   </div>
 
   <footer class="site-footer">
