@@ -36,10 +36,11 @@ const META_KEY="seventhLanternMetaV5";
 const DEFAULT_GAME_SETTINGS={master:.88,sfx:.86,ambience:.58,screenShake:true,flash:true,routeHints:true,ambientAccents:true};
 function readJsonStorage(key,fallback){try{const v=JSON.parse(localStorage.getItem(key));return v&&typeof v==="object"?v:fallback}catch(_e){return fallback}}
 let gameSettings={...DEFAULT_GAME_SETTINGS,...readJsonStorage(SETTINGS_KEY,{})};
-let metaProgress={completed:false,completions:0,endings:[],bestDifficulty:"",memoryFinds:[],visitedRegions:[],echoClears:0,totalDeaths:0,bestClearMs:null,lastClear:null,...readJsonStorage(META_KEY,{})};
+let metaProgress={completed:false,completions:0,endings:[],bestDifficulty:"",memoryFinds:[],echoFinds:[],visitedRegions:[],echoClears:0,totalDeaths:0,bestClearMs:null,lastClear:null,...readJsonStorage(META_KEY,{})};
 let runStats={playMs:0,deaths:0,hitsTaken:0};
 if(!Array.isArray(metaProgress.endings))metaProgress.endings=[];
 if(!Array.isArray(metaProgress.memoryFinds))metaProgress.memoryFinds=[];
+if(!Array.isArray(metaProgress.echoFinds))metaProgress.echoFinds=[];
 if(!Array.isArray(metaProgress.visitedRegions))metaProgress.visitedRegions=[];
 const MEMORY_ARCHIVE=[
   {id:"opera_burned_ticket",chapter:"无面戏楼",title:"焦边戏票",text:"中元夜的戏票只印了六个座号，第七个位置却被人画在票背。"},
@@ -63,6 +64,8 @@ function refreshMetaButtons(){if(echoBtn)echoBtn.classList.toggle("hidden",!meta
 function mergeMetaFromRun(){
   const mem=world?.chapterProgress?.story?.memoryFinds||[];
   metaProgress.memoryFinds=[...new Set([...(metaProgress.memoryFinds||[]),...mem])];
+  const echoes=world?.chapterProgress?.story?.echoFinds||[];
+  metaProgress.echoFinds=[...new Set([...(metaProgress.echoFinds||[]),...echoes])];
   const regions=world?.visitedRegions?Object.keys(world.visitedRegions).filter(k=>world.visitedRegions[k]):[];
   metaProgress.visitedRegions=[...new Set([...(metaProgress.visitedRegions||[]),...regions])];
   persistMeta();
@@ -573,7 +576,7 @@ function npcVisualFor(obj){
 
 function freshChapterProgress(){
   return {
-    story:{umbrellaRainTalked:false,umbrellaRainDeparting:false,umbrellaRainGone:false,umbrellaFerryTalked:false,umbrellaFerryGone:false,operaSingerIntroSeen:false,operaSingerClueSeen:false,operaSingerFarewellSeen:false,girlRainSeen:false,girlBossSeen:false,girlOperaSeen:false,girlBambooSeen:false,girlBambooHintSeen:false,girlFerrySeen:false,girlFerryHintSeen:false,girlCityTalked:false,girlCityDeparting:false,girlCityGone:false,girlCityHintSeen:false,girlFinalSeen:false,memoryFinds:[],memoryCompleteSeen:false,echoFinds:[],echoNpcSeen:[],echoCompleteSeen:false,echoTruthUnlocked:false},
+    story:{umbrellaRainTalked:false,umbrellaRainDeparting:false,umbrellaRainGone:false,umbrellaFerryTalked:false,umbrellaFerryGone:false,operaSingerIntroSeen:false,operaSingerClueSeen:false,operaSingerFarewellSeen:false,girlRainSeen:false,girlBossSeen:false,girlOperaSeen:false,girlBambooSeen:false,girlBambooHintSeen:false,girlFerrySeen:false,girlFerryHintSeen:false,girlCityTalked:false,girlCityDeparting:false,girlCityGone:false,girlCityHintSeen:false,girlFinalSeen:false,memoryFinds:[],memoryCompleteSeen:false,echoFinds:[],echoNpcSeen:[],echoLayerSeen:false,echoCompleteSeen:false,echoTruthUnlocked:false},
     opera:{talked:false,clues:[],sequence:[],wrongAttempts:0,solved:false,liftRaised:false,liftProgress:0},
     bamboo:{talked:false,clues:[],tuned:[],wrongAttempts:0,reflectionSealed:false,solved:false},
     ferry:{talked:false,names:[],reflectionRevealed:false,debrisCleared:false,winchTurns:0,wrongAttempts:0,solved:false,boatProgress:0},
@@ -2048,8 +2051,14 @@ function collectEchoTrace(id,title,lines){
   story.echoFinds||(story.echoFinds=[]);
   const first=!story.echoFinds.includes(id);
   if(first){
-    story.echoFinds.push(id);sound.play("story_ghost",{volume:.18,rate:.88});sound.lantern("unstable");
+    story.echoFinds.push(id);sound.play("story_ghost",{volume:.18,rate:.88});sound.lantern("unstable");mergeMetaFromRun();
     showToast(`回响痕迹 ${story.echoFinds.length}/5`,2.6);
+    if(story.echoFinds.length===3&&!story.echoLayerSeen){
+      story.echoLayerSeen=true;
+      const lastName={keep:"留下阿砚",return:"归还记忆",extinguish:"熄灭第七盏灯",remember:"记住第七个人"}[metaProgress.lastClear?.ending]||"一个已经做过的选择";
+      queueDialogue("回声夹层",["三处回响同时亮起，周围的雨声短暂倒放。",`你听见一个不属于这一周目的答案：『${lastName}。』`,"无阴镇没有重置。它只是让你从开头重新走了一遍。"]);
+      showGuidance("回声夹层","二周目正在记住你上一周目的选择。剩下两处回响会把这条线带到终章。","",4.8);
+    }
   }
   queueDialogue(title,lines);
   if(first&&story.echoFinds.length>=5&&!story.echoCompleteSeen){
@@ -2466,7 +2475,8 @@ const ENDING_CHOICES=[
 const ECHO_ENDING={id:"remember",title:"记住第七个人",sub:"不替灯决定谁该留下，而是承认每一次选择都由你亲手做出"};
 function hiddenEchoEndingUnlocked(){
   const story=world?.chapterProgress?.story||{};
-  return difficulty==="echo"&&story.echoTruthUnlocked&&(story.echoFinds||[]).length>=5&&(story.memoryFinds||[]).length>=5;
+  const memories=new Set([...(metaProgress.memoryFinds||[]),...(story.memoryFinds||[])]);
+  return difficulty==="echo"&&story.echoTruthUnlocked&&(story.echoFinds||[]).length>=5&&memories.size>=5;
 }
 function currentEndingChoices(){
   return hiddenEchoEndingUnlocked()?[...ENDING_CHOICES,ECHO_ENDING]:ENDING_CHOICES;
@@ -3783,6 +3793,15 @@ function drawChapterGameplay(){
     }
     if(o.kind==="flavor"){
       drawSpriteAsset("itemNote",o.x,o.y,46,false,.50);continue;
+    }
+    if(o.kind==="echoMemory"){
+      const wave=.5+.5*Math.sin(gameTime*4.2+o.x*.01);
+      glow(o.x,o.y-24,48+wave*12,"#b7638c",.16+.12*wave);
+      ctx.save();ctx.globalCompositeOperation="screen";ctx.globalAlpha=.42+.22*wave;
+      drawSpriteAsset("itemNote",o.x-2,o.y,52,false,.82);
+      ctx.strokeStyle="#c980a4";ctx.lineWidth=1.2;ctx.setLineDash([5,5]);
+      ctx.beginPath();ctx.ellipse(o.x,o.y-22,30+wave*7,13+wave*3,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+      continue;
     }
     if(o.kind==="gong"){
       const active=p.sequence.includes(o.index)||p.solved;if(active)glow(o.x,500,62,"#ffc969",.20);pa.draw(ctx,"operaGong",o.x,610,130+o.index*10,false,active?1:.72);continue;
