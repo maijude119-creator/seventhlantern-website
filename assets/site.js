@@ -4,8 +4,10 @@
     set(store,key,val){try{window[store]?.setItem(key,val);return true}catch(_e){return false}}
   };
   const cfg=window.SEVENTH_LANTERN_CONFIG||{};
-  document.querySelectorAll('[data-version]').forEach(el=>el.textContent=cfg.version||'v1.0.0');
-  document.querySelectorAll('[data-web-version]').forEach(el=>el.textContent=cfg.webGameVersion||cfg.version||'v1.0.0');
+  const winVersion=cfg.windowsVersion||cfg.version||'v1.0.0';
+  document.querySelectorAll('[data-version]').forEach(el=>el.textContent=winVersion);
+  document.querySelectorAll('[data-win-version]').forEach(el=>el.textContent=winVersion);
+  document.querySelectorAll('[data-web-version]').forEach(el=>el.textContent=cfg.webGameVersion||winVersion);
   const header=document.querySelector('.site-header');
   const progressBar=document.getElementById('pageProgressBar');
   const hero=document.querySelector('.hero');
@@ -19,13 +21,25 @@
     }
   };
   addEventListener('scroll',onScroll,{passive:true});onScroll();
-  document.querySelectorAll('[data-site-build]').forEach(el=>el.textContent=cfg.siteBuild||'v1.8');
+  document.querySelectorAll('[data-site-build]').forEach(el=>el.textContent=cfg.siteBuild||'v2.0');
   const menuToggle=document.getElementById('menuToggle');
   const mainNav=document.getElementById('mainNav');
   if(menuToggle&&mainNav){
-    const closeMenu=()=>{mainNav.classList.remove('open');menuToggle.classList.remove('open');menuToggle.setAttribute('aria-expanded','false')};
-    menuToggle.addEventListener('click',()=>{const open=!mainNav.classList.contains('open');mainNav.classList.toggle('open',open);menuToggle.classList.toggle('open',open);menuToggle.setAttribute('aria-expanded',String(open))});
+    const closeMenu=()=>{mainNav.classList.remove('open');menuToggle.classList.remove('open');menuToggle.setAttribute('aria-expanded','false');document.body.classList.remove('nav-open')};
+    menuToggle.addEventListener('click',()=>{const open=!mainNav.classList.contains('open');mainNav.classList.toggle('open',open);menuToggle.classList.toggle('open',open);menuToggle.setAttribute('aria-expanded',String(open));document.body.classList.toggle('nav-open',open)});
     mainNav.querySelectorAll('a').forEach(a=>a.addEventListener('click',closeMenu));
+  }
+
+  const homeNavLinks=[...document.querySelectorAll('#mainNav a[href^="#"]')];
+  if(document.body.dataset.page==='home'&&homeNavLinks.length){
+    const observed=homeNavLinks.map(a=>({a,id:a.getAttribute('href').slice(1),el:document.getElementById(a.getAttribute('href').slice(1))})).filter(x=>x.el);
+    const updateSectionNav=()=>{
+      const y=scrollY+innerHeight*.28;
+      let current=null;
+      for(const item of observed){if(item.el.offsetTop<=y)current=item;}
+      document.querySelectorAll('#mainNav a').forEach(a=>a.classList.toggle('active',a===current?.a||(!current&&a.getAttribute('href')==='/')));
+    };
+    addEventListener('scroll',updateSectionNav,{passive:true});updateSectionNav();
   }
 
   const intro=document.getElementById('intro');
@@ -44,6 +58,17 @@
     revealEls.forEach(el=>io.observe(el));
     setTimeout(()=>revealEls.forEach(el=>{if(!el.classList.contains('visible')){el.classList.remove('reveal-armed');el.classList.add('visible')}}),3500);
   }else revealEls.forEach(el=>el.classList.add('visible'));
+
+  function installImageFallbacks(){
+    document.querySelectorAll('img').forEach(img=>{
+      if(!img.hasAttribute('decoding'))img.decoding='async';
+      if(!img.closest('.hero')&&!img.closest('.media-lightbox')&&!img.hasAttribute('loading'))img.loading='lazy';
+      const fail=()=>{img.classList.add('image-load-failed');const box=img.parentElement;box?.classList.add('image-missing');if(box&&!box.querySelector('.image-missing-note')){const note=document.createElement('span');note.className='image-missing-note';note.textContent='画面加载失败';box.appendChild(note)}};
+      img.addEventListener('error',fail,{once:true});
+      if(img.complete&&img.naturalWidth===0)fail();
+    });
+  }
+  installImageFallbacks();
 
   const worldTrack=document.getElementById('worldTrack'),dots=document.getElementById('worldDots');
   if(worldTrack&&dots){
@@ -182,9 +207,21 @@
       if(direct.sizeBytes)document.getElementById('releaseSize').textContent=formatBytes(direct.sizeBytes);
     }
     const {owner,repo}=cfg.github||{};if(!btn||!owner||!repo)return;
-    try{const r=await fetch(`https://api.github.com/repos/${owner}/${repo}/releases`);if(!r.ok)throw new Error('release');const releases=await r.json();const latest=releases.find(x=>!x.draft&&!x.prerelease)||releases[0];if(!latest)return;const asset=latest.assets?.find(a=>/\.zip$/i.test(a.name))||latest.assets?.[0];if(asset){btn.href=asset.browser_download_url;btn.textContent='下载 Windows 完整版';btn.classList.remove('disabled');btn.removeAttribute('aria-disabled');document.getElementById('releaseSize').textContent=formatBytes(asset.size)}const total=releases.flatMap(x=>x.assets||[]).reduce((s,a)=>s+(a.download_count||0),0);document.getElementById('downloadCount').textContent=total.toLocaleString();document.querySelectorAll('[data-version]').forEach(el=>el.textContent=latest.tag_name||cfg.version)}catch(e){console.warn('GitHub Release unavailable',e)}}
+    try{const r=await fetch(`https://api.github.com/repos/${owner}/${repo}/releases`);if(!r.ok)throw new Error('release');const releases=await r.json();const latest=releases.find(x=>!x.draft&&!x.prerelease)||releases[0];if(!latest)return;const asset=latest.assets?.find(a=>/\.zip$/i.test(a.name))||latest.assets?.[0];if(asset){btn.href=asset.browser_download_url;btn.textContent='下载 Windows 完整版';btn.classList.remove('disabled');btn.removeAttribute('aria-disabled');document.getElementById('releaseSize').textContent=formatBytes(asset.size)}const total=releases.flatMap(x=>x.assets||[]).reduce((s,a)=>s+(a.download_count||0),0);document.getElementById('downloadCount').textContent=total.toLocaleString();document.querySelectorAll('[data-version],[data-win-version]').forEach(el=>el.textContent=latest.tag_name||winVersion)}catch(e){console.warn('GitHub Release unavailable',e)}}
   function formatBytes(n){if(!n)return'--';const u=['B','KB','MB','GB'];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return`${n.toFixed(i>1?1:0)} ${u[i]}`}
   loadRelease();
+
+  const timeline=document.querySelector('.timeline');
+  if(document.body.dataset.page==='changelog'&&timeline){
+    const entries=[...timeline.querySelectorAll(':scope > article')];
+    if(entries.length>8){
+      entries.slice(8).forEach(el=>el.classList.add('timeline-older'));
+      const wrap=document.createElement('div');wrap.className='timeline-more';
+      const btn=document.createElement('button');btn.type='button';btn.id='timelineToggle';btn.textContent='展开更早更新（'+(entries.length-8)+'）';
+      let open=false;btn.addEventListener('click',()=>{open=!open;timeline.classList.toggle('show-all',open);btn.textContent=open?'收起早期更新':'展开更早更新（'+(entries.length-8)+'）';});
+      wrap.appendChild(btn);timeline.appendChild(wrap);
+    }
+  }
 
   const welcome=document.getElementById('playWelcome');
   if(welcome){
