@@ -2,7 +2,7 @@
   title: "第7盏灯",
   author: "买橘的",
   version: "v1.0.0",
-  siteBuild: "v1.4",
+  siteBuild: "v1.5",
   releaseDate: "2026.09.27",
   download: {
     url: "https://github.com/maijude119-creator/seventhlantern-website/releases/download/v1.0.0/SeventhLantern_v1.0.0_Windows.zip",
@@ -12,6 +12,10 @@
   github: {
     owner: "maijude119-creator",
     repo: "seventhlantern-website"
+  },
+  supabase: {
+    url: "https://mjsbtpswvjqizskhqaiz.supabase.co",
+    key: "sb_publishable_V7Ng1y6UiCZ7--JqiLC7hg_VKHnY7hS"
   },
   socials: {
     douyin: "",
