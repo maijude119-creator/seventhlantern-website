@@ -25,40 +25,93 @@
     Object.entries(labels).forEach(([k,label])=>{const a=document.createElement(cfg.socials?.[k]?'a':'span');a.className='social-pill'+(cfg.socials?.[k]?' enabled':'');a.textContent=label+(cfg.socials?.[k]?'':' · 待填写');if(cfg.socials?.[k]){a.href=cfg.socials[k];a.target='_blank';a.rel='noopener'}socials.appendChild(a)});
   }
 
-  const privateFeedbackButton=document.getElementById('privateFeedbackButton');
-  privateFeedbackButton?.addEventListener('click',()=>{
-    const n=document.getElementById('feedbackNote');
-    if(n){n.textContent='私密反馈后台还没有接入持久化数据库，因此当前不会收集或伪装保存你的内容。';n.style.color='#d0aa79';}
+  const sb=cfg.supabase||{};
+  const sbHeaders=()=>({
+    'Content-Type':'application/json',
+    'apikey':sb.key||'',
+    'Authorization':'Bearer '+(sb.key||'')
   });
 
+  const feedback=document.getElementById('feedbackForm');
+  if(feedback) feedback.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const note=document.getElementById('feedbackNote');
+    const btn=feedback.querySelector('button[type="submit"]');
+    const data=Object.fromEntries(new FormData(feedback));
+    const message=(data.message||'').trim();
+    if(!message)return;
+    if(!sb.url||!sb.key){if(note)note.textContent='反馈后台暂时不可用，请使用公开 Bug 入口。';return;}
+    try{
+      if(btn){btn.disabled=true;btn.textContent='提交中…';}
+      const r=await fetch(sb.url+'/rest/v1/feedback',{
+        method:'POST',
+        headers:{...sbHeaders(),'Prefer':'return=minimal'},
+        body:JSON.stringify({type:(data.type||'其他建议').slice(0,40),message:message.slice(0,2000),contact:(data.contact||'').trim().slice(0,200)||null,page:location.href.slice(0,300)})
+      });
+      if(!r.ok)throw new Error('feedback '+r.status);
+      feedback.reset();
+      if(note){note.textContent='已私密提交给买橘的。感谢反馈。';note.style.color='#cda06c';}
+    }catch(err){
+      if(note){note.textContent='提交失败，请稍后再试，或使用“公开 Bug”。';note.style.color='#c56e61';}
+    }finally{
+      if(btn){btn.disabled=false;btn.textContent='私密提交';}
+    }
+  });
+
+  const guest=document.getElementById('guestbookForm');
   const messages=document.getElementById('messages');
   const guestbookStatus=document.getElementById('guestbookStatus');
   async function loadGuestbook(){
     if(!messages)return;
     messages.innerHTML='<article class="message"><p>正在读取无阴镇的线上纸签……</p></article>';
+    if(!sb.url||!sb.key){messages.innerHTML='<article class="message"><b>留言墙暂时不可用</b><p>后台连接尚未完成。</p></article>';return;}
     try{
-      const r=await fetch('https://api.github.com/repos/maijude119-creator/seventhlantern-website/issues?state=open&per_page=40',{headers:{Accept:'application/vnd.github+json'}});
-      if(!r.ok)throw new Error('guestbook');
-      const issues=(await r.json()).filter(x=>!x.pull_request&&/^\[留言\]/.test(x.title||'')).slice(0,12);
+      const r=await fetch(sb.url+'/rest/v1/guestbook?select=name,message,created_at&approved=eq.true&order=created_at.desc&limit=12',{headers:sbHeaders()});
+      if(!r.ok)throw new Error('guestbook '+r.status);
+      const rows=await r.json();
       messages.innerHTML='';
-      if(!issues.length){
+      if(!rows.length){
         messages.innerHTML='<article class="message"><b>第一张纸签还没出现</b><p>你可以成为第一个在这里留下话的人。</p></article>';
       }else{
-        issues.forEach(x=>{
+        rows.forEach(m=>{
           const el=document.createElement('article');el.className='message';
-          const body=String(x.body||'').replace(/<!--.*?-->/gs,'').replace(/[#>*_\`\[\]-]/g,' ').replace(/\s+/g,' ').trim();
-          const clean=body.length>190?body.slice(0,190)+'…':body;
-          el.innerHTML='<b>'+escapeHtml(x.user?.login||'无名客')+'</b><time>'+escapeHtml((x.created_at||'').slice(0,10))+'</time><p>'+escapeHtml(clean||x.title.replace(/^\[留言\]\s*/,''))+'</p><a class="message-link" href="'+x.html_url+'" target="_blank" rel="noopener">查看纸签 →</a>';
+          el.innerHTML='<b>'+escapeHtml(m.name||'无名客')+'</b><time>'+escapeHtml((m.created_at||'').slice(0,10))+'</time><p>'+escapeHtml(m.message||'')+'</p>';
           messages.appendChild(el);
         });
       }
-      if(guestbookStatus)guestbookStatus.textContent='线上留言 · '+issues.length+' 张';
-    }catch(e){
-      messages.innerHTML='<article class="message"><b>纸签读取失败</b><p>GitHub 暂时没有回应，可以稍后刷新；留言本身仍保存在 GitHub。</p></article>';
+      if(guestbookStatus)guestbookStatus.textContent='已公开纸签 · '+rows.length+' 张';
+    }catch(err){
+      messages.innerHTML='<article class="message"><b>纸签读取失败</b><p>后台暂时没有回应，可以稍后刷新。</p></article>';
       if(guestbookStatus)guestbookStatus.textContent='线上留言暂时读取失败';
     }
   }
   loadGuestbook();
+
+  if(guest) guest.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const data=Object.fromEntries(new FormData(guest));
+    const name=((data.name||'').trim()||'无名客').slice(0,32);
+    const message=(data.message||'').trim().slice(0,300);
+    const btn=guest.querySelector('button[type="submit"]');
+    if(!message)return;
+    if(!sb.url||!sb.key){if(guestbookStatus)guestbookStatus.textContent='留言后台暂时不可用';return;}
+    try{
+      if(btn){btn.disabled=true;btn.textContent='提交中…';}
+      const r=await fetch(sb.url+'/rest/v1/guestbook',{
+        method:'POST',
+        headers:{...sbHeaders(),'Prefer':'return=minimal'},
+        body:JSON.stringify({name,message,approved:false,source:'website'})
+      });
+      if(!r.ok)throw new Error('guest '+r.status);
+      guest.reset();
+      if(guestbookStatus)guestbookStatus.textContent='纸签已提交，审核通过后会公开显示';
+    }catch(err){
+      if(guestbookStatus)guestbookStatus.textContent='提交失败，请稍后再试';
+    }finally{
+      if(btn){btn.disabled=false;btn.textContent='留下纸签';}
+    }
+  });
+
   function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 
   async function loadRelease(){
