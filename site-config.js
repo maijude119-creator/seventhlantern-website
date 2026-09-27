@@ -3,7 +3,7 @@
   author: "买橘的",
   version: "v1.0.0",
   windowsVersion: "v1.0.0",
-  webGameVersion: "v5.1.0",
+  webGameVersion: "v5.2.0",
   siteBuild: "v2.0",
   releaseDate: "2026.09.27",
   download: {
