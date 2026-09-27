@@ -25,6 +25,60 @@ const toastEl = document.getElementById("toast");
 const continueBtn = document.getElementById("continueBtn");
 const portraitCanvas = document.getElementById("portraitCanvas");
 const portraitCtx = portraitCanvas?.getContext?.("2d") || null;
+const settingsPanel = document.getElementById("settings");
+const archivePanel = document.getElementById("archive");
+const echoBtn = document.getElementById("echoBtn");
+const archiveGrid = document.getElementById("archiveGrid");
+const archiveSummary = document.getElementById("archiveSummary");
+
+const SETTINGS_KEY="seventhLanternSettingsV2";
+const META_KEY="seventhLanternMetaV5";
+const DEFAULT_GAME_SETTINGS={master:.88,sfx:.86,ambience:.58,screenShake:true,flash:true,routeHints:true,ambientAccents:true};
+function readJsonStorage(key,fallback){try{const v=JSON.parse(localStorage.getItem(key));return v&&typeof v==="object"?v:fallback}catch(_e){return fallback}}
+let gameSettings={...DEFAULT_GAME_SETTINGS,...readJsonStorage(SETTINGS_KEY,{})};
+let metaProgress={completed:false,completions:0,endings:[],bestDifficulty:"",memoryFinds:[],visitedRegions:[],echoClears:0,...readJsonStorage(META_KEY,{})};
+if(!Array.isArray(metaProgress.endings))metaProgress.endings=[];
+if(!Array.isArray(metaProgress.memoryFinds))metaProgress.memoryFinds=[];
+if(!Array.isArray(metaProgress.visitedRegions))metaProgress.visitedRegions=[];
+const MEMORY_ARCHIVE=[
+  {id:"opera_burned_ticket",chapter:"无面戏楼",title:"焦边戏票",text:"中元夜的戏票只印了六个座号，第七个位置却被人画在票背。"},
+  {id:"bamboo_incense_book",chapter:"倒悬竹寺",title:"残破香火簿",text:"六个固定名字之外，每年都有一行没有姓名的孩子记录。"},
+  {id:"ferry_child_ticket",chapter:"逆流古渡",title:"儿童船票",text:"七年前中元夜的一张未验儿童票，只留下七岁与“没上船，也算一个”。"},
+  {id:"city_paper_crane",chapter:"幽都纸城",title:"压扁的纸鹤",text:"纸鹤里藏着一句没写完的“我叫阿——”。"},
+  {id:"final_blank_tag",chapter:"第七灯域",title:"烧白的空名签",text:"没有旧名与死亡年月，却缝着和纸扎铺旧照片一样的红线。"}
+];
+function persistSettings(){
+  try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(gameSettings));}catch(_e){}
+  window.AudioManager?.setVolumes?.({master:gameSettings.master,sfx:gameSettings.sfx,ambience:gameSettings.ambience});
+  document.body.classList.toggle("low-flash",!gameSettings.flash);
+}
+function persistMeta(){try{localStorage.setItem(META_KEY,JSON.stringify(metaProgress));}catch(_e){}refreshMetaButtons();}
+function refreshMetaButtons(){if(echoBtn)echoBtn.classList.toggle("hidden",!metaProgress.completed);}
+function mergeMetaFromRun(){
+  const mem=world?.chapterProgress?.story?.memoryFinds||[];
+  metaProgress.memoryFinds=[...new Set([...(metaProgress.memoryFinds||[]),...mem])];
+  const regions=world?.visitedRegions?Object.keys(world.visitedRegions).filter(k=>world.visitedRegions[k]):[];
+  metaProgress.visitedRegions=[...new Set([...(metaProgress.visitedRegions||[]),...regions])];
+  persistMeta();
+}
+function applySettingsToUI(){
+  const pairs=[["masterVolume","master",100],["sfxVolume","sfx",100],["ambienceVolume","ambience",100]];
+  for(const [id,key,mul] of pairs){const el=document.getElementById(id),out=document.getElementById(id+"Value");if(el)el.value=Math.round(gameSettings[key]*mul);if(out)out.textContent=Math.round(gameSettings[key]*mul);}
+  const toggles=[["screenShakeSetting","screenShake"],["flashSetting","flash"],["routeHintSetting","routeHints"],["ambientAccentSetting","ambientAccents"]];
+  for(const [id,key] of toggles){const el=document.getElementById(id);if(el)el.checked=!!gameSettings[key];}
+  persistSettings();
+}
+function renderArchive(){
+  if(!archiveGrid||!archiveSummary)return;
+  const current=world?.chapterProgress?.story?.memoryFinds||[];
+  const found=new Set([...(metaProgress.memoryFinds||[]),...current]);
+  const visited=new Set([...(metaProgress.visitedRegions||[]),...Object.keys(world?.visitedRegions||{}).filter(k=>world.visitedRegions[k])]);
+  archiveSummary.innerHTML=`<span>旧事残片 ${found.size}/5</span><span>到访区域 ${visited.size}</span><span>通关 ${metaProgress.completions||0} 次</span><span>结局 ${(metaProgress.endings||[]).length}/3</span>`;
+  archiveGrid.innerHTML=MEMORY_ARCHIVE.map((m,i)=>found.has(m.id)?
+    `<article class="archive-card found"><small>${m.chapter}</small><b>${i+1}. ${m.title}</b><p>${m.text}</p><span class="archive-seal">已拾</span></article>`:
+    `<article class="archive-card locked"><small>${m.chapter}</small><b>${i+1}. ？？？？</b><p>这段旧事还留在无阴镇的某个角落。</p></article>`).join("");
+}
+persistSettings();refreshMetaButtons();
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
