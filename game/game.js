@@ -49,6 +49,9 @@ let lReleasedDuration = 0;
 let guidance = {title:"", text:"", key:"", timer:0};
 let hitStop = 0;
 let impactFlash = 0;
+let cameraKickX = 0, cameraKickY = 0;
+let impactSpot = {x:0,y:0,life:0,max:.16,color:"#ffe2ad",power:0};
+let routeHintIdle = 0;
 let lanternWarningTimer = 0;
 let lanternWarningLatched = false;
 let fixedAccumulator = 0;
@@ -1099,7 +1102,7 @@ function resetPlayer(x=220,y=480){
     lampHeld:false,dead:false,deathTimer:0,deathPhase:'idle',deathVisualTimer:0,paperHurtFlash:0,interactCandidates:[],interactIndex:0});
   world.lamp.held=false;world.lamp.focused=false;world.lampAcquired=false;world.lamp.x=318;world.lamp.y=520;world.lamp.angle=0;world.lamp.facing=1;world.lamp.lit=true;
   const spawnGround=getPrimaryGroundAt(player.x+player.w*.5);if(spawnGround){player.y=spawnGround.y-player.h;player.grounded=true;player.groundY=spawnGround.y;player.currentGroundId=spawnGround.id;player.lastValidGroundPosition={x:player.x,y:player.y,groundY:spawnGround.y};}
-  player.checkpointX=player.x; player.checkpointY=player.y; cameraX=clamp(player.x-W*.35,0,world.width-W);resetCameraRuntime();
+  player.checkpointX=player.x; player.checkpointY=player.y; cameraX=clamp(player.x-W*.35,0,world.width-W);cameraKickX=0;cameraKickY=0;impactSpot.life=0;routeHintIdle=0;resetCameraRuntime();
 }
 
 function startGame(diff="normal", fromSave=false, assetsConfirmed=false){
@@ -1409,8 +1412,10 @@ function respawn(){
 function damagePlayer(amount,dir=0){
   if(player.invuln>0||player.dodging>0||player.dead) return;
   const mult=difficultyValues[difficulty].enemyDamage;
-  player.vx=dir*190; player.vy=-170; player.charging=false;player.chargeLevel=0;sound.hurt(); shake=12; hitStop=.045;
+  player.vx=dir*190; player.vy=-170; player.charging=false;player.chargeLevel=0;sound.hurt(); shake=10; hitStop=.045;
   player.health=clamp(player.health-amount*mult,0,player.maxHealth); player.invuln=.8; player.hurtTimer=.22;
+  kickCamera((dir||-player.facing)*9,-5);registerImpact(player.x+player.w*.5,player.y+player.h*.42,"#e6c7a2",1.2);
+  createDirectionalBurst(player.x+player.w*.5,player.y+player.h*.42,"#d8c39d",7,-(dir||player.facing),.9);
   spawnPaperDamageFx(player.x+player.w*.5,player.y+player.h*.42,11);
   player.paperHurtFlash=.34;
   if(player.health<=0){ player.health=0; beginPaperDeath(); sound.play("player_death",{volume:.58}); }
@@ -1595,6 +1600,19 @@ function createBurst(x,y,color,count=10){
   const room=Math.max(0,MAX_PARTICLES-world.particles.length);
   count=Math.min(count,room);
   for(let i=0;i<count;i++) world.particles.push({x,y,vx:rand(-170,170),vy:rand(-210,60),life:rand(.25,.65),max:.65,color,size:rand(2,7)});
+}
+function createDirectionalBurst(x,y,color,count=6,dir=1,power=1){
+  const room=Math.max(0,MAX_PARTICLES-world.particles.length);count=Math.min(count,room);
+  for(let i=0;i<count;i++){
+    const life=rand(.12,.26);
+    world.particles.push({x,y,type:"spark",vx:dir*rand(90,220)*power+rand(-45,45),vy:rand(-130,80)*power,life,max:life,color,size:rand(1.4,3.4)});
+  }
+}
+function kickCamera(x=0,y=0){
+  cameraKickX=clamp(cameraKickX+x,-18,18);cameraKickY=clamp(cameraKickY+y,-14,14);
+}
+function registerImpact(x,y,color="#ffe2ad",power=1){
+  const max=.13+Math.min(.08,power*.025);impactSpot={x,y,color,power,life:max,max};
 }
 
 function showLampRaiseTutorialIfNeeded(title="影子先于身体",text="按 Q 举灯，再用 W / S 调整光束；影子凝实后用 J 击退"){
