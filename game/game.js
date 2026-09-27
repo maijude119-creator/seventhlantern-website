@@ -611,12 +611,25 @@ const SAVE_KEY="seventhLanternSave";
 const SAVE_BACKUP_KEY="seventhLanternSaveBackup";
 const SAVE_VERSION=4;
 function parseSave(raw){try{const s=JSON.parse(raw);return s&&typeof s==="object"&&Number.isFinite(s.savedAt)?s:null}catch(_e){return null}}
+function saveLooksUsable(s){
+  if(!s||!Number.isFinite(s.savedAt))return false;
+  const x=s.checkpointX??s.x,y=s.checkpointY??s.y;
+  if(!Number.isFinite(x)||!Number.isFinite(y))return false;
+  if(x<-100||x>world.width+100||y<-300||y>900)return false;
+  if(s.chapterProgress!=null&&typeof s.chapterProgress!=="object")return false;
+  if(s.currentRegion!=null&&!SCENE_REGIONS.some(r=>r.id===s.currentRegion))return false;
+  return true;
+}
 function loadBestSave(){
   try{
     const primary=parseSave(localStorage.getItem(SAVE_KEY));
     const backup=parseSave(localStorage.getItem(SAVE_BACKUP_KEY));
-    if(primary&&backup)return primary.savedAt>=backup.savedAt?primary:backup;
-    return primary||backup||null;
+    const p=saveLooksUsable(primary)?primary:null,b=saveLooksUsable(backup)?backup:null;
+    const best=p&&b?(p.savedAt>=b.savedAt?p:b):(p||b||null);
+    if(best&&best===b&&!p){
+      try{localStorage.setItem(SAVE_KEY,JSON.stringify(b));}catch(_e){}
+    }
+    return best;
   }catch(_e){return null}
 }
 const REGION_RESUME_POINTS={
@@ -627,7 +640,9 @@ const REGION_RESUME_POINTS={
 const regionOrder=id=>Math.max(0,SCENE_REGIONS.findIndex(r=>r.id===id));
 function resumePointForRegion(id){return REGION_RESUME_POINTS[id]||REGION_RESUME_POINTS.paperShop;}
 function setProgressCheckpoint(regionId){
-  const point=resumePointForRegion(regionId),ground=getPrimaryGroundAt(point.x);
+  const point=resumePointForRegion(regionId);
+  const desiredFoot=(point.y??538)+player.h;
+  const ground=getGroundAt(point.x,desiredFoot-120,260)||getPrimaryGroundAt(point.x);
   player.checkpointX=point.x;player.checkpointY=ground?ground.y-player.h:point.y;
   const lamp=world.checkpoints.find(c=>Math.abs(c.x-point.x)<12);if(lamp)lamp.lit=true;
 }
@@ -1453,7 +1468,11 @@ function respawn(){
   if(hadLamp){player.lampHeld=true;world.lamp.held=true;world.lampAcquired=true;world.lamp.focused=wasFocused;world.lamp.facing=player.facing;}
   else {player.lampHeld=false;world.lamp.held=false;world.lamp.focused=false;}
   player.invuln=1.4; cameraX=clamp(player.x-W*.35,0,world.width-W);resetCameraRuntime();
-  world.projectiles=[];world.fields=[];player.charging=false;player.chargeLevel=0;
+  world.projectiles=[];world.fields=[];
+  player.attack=null;player.attackCooldown=0;player.attackBuffer=0;player.attackBufferHeld=0;player.combo=0;player.lastAttack=0;
+  player.charging=false;player.chargeLevel=0;player.chargeCue=0;player.dodging=0;player.dodgeDirection=-player.facing;player.hurtTimer=0;player.paperHurtFlash=0;
+  pressed.clear();released.clear();for(const k of Object.keys(keys))keys[k]=false;jHoldStart=0;lHoldStart=0;lReleasedDuration=0;
+  hitStop=0;impactFlash=0;cameraKickX=0;cameraKickY=0;impactSpot.life=0;routeHintIdle=0;
   for(const e of world.enemies){ if(!e.alive && Math.abs(e.x-player.x)<1000 && e.id!=="guardian") resetEnemyForRespawn(e); }
   if(bossAttemptReset){
     dialogueQueue=[];currentDialogue=null;dialogueEl.classList.remove("visible");
@@ -2744,8 +2763,9 @@ function queueBossAttack(b){
 
 function bossAttack(b){
   const attackId=b.queuedAttackId||chooseBossAttack(b);
+  const attackKind=b.telegraphKind||bossAttackMeta(attackId).kind||"volley";
   b.lastAttackId=attackId;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphLabel="";
-  b.attackFlash=.32;shake=Math.max(shake,5.5);sound.bossAttack(b.telegraphKind||(/Wave/.test(attackId)?"ground":/dash/i.test(attackId)?"dash":"volley"));
+  b.attackFlash=.32;shake=Math.max(shake,5.5);sound.bossAttack(attackKind);
   if(/Wave/.test(attackId)||attackId==="fanWave")kickCamera(0,5);
   else if(/dash/i.test(attackId))kickCamera((b.telegraphDir||-1)*6,-2);
   else kickCamera((b.telegraphDir||-1)*2.5,-1);
@@ -4484,14 +4504,21 @@ document.getElementById("quitBtn").onclick=()=>{state="menu";showPanel(menu);};
 document.getElementById("fullscreen").onclick=()=>{if(!document.fullscreenElement)document.getElementById("app").requestFullscreen?.();else document.exitFullscreen?.();};
 
 try{if(loadBestSave())continueBtn.classList.remove("hidden");}catch(_e){}
-document.addEventListener("visibilitychange",()=>{if(document.hidden&&state==="playing"&&world&&player&&!player.dead)saveGame({resumeRegion:world.currentRegion});});
-window.addEventListener("pagehide",()=>{if(state==="playing"&&world&&player&&!player.dead)saveGame({resumeRegion:world.currentRegion});});
+function clearTransientInputState(){
+  pressed.clear();released.clear();
+  for(const k of Object.keys(keys))keys[k]=false;
+  jHoldStart=0;lHoldStart=0;lReleasedDuration=0;
+  if(player){player.charging=false;player.chargeLevel=0;player.chargeCue=0;player.attackBuffer=0;player.attackBufferHeld=0;}
+}
+window.addEventListener("blur",clearTransientInputState);
+document.addEventListener("visibilitychange",()=>{if(document.hidden){clearTransientInputState();if(state==="playing"&&world&&player&&!player.dead)saveGame({resumeRegion:world.currentRegion});}});
+window.addEventListener("pagehide",()=>{clearTransientInputState();if(state==="playing"&&world&&player&&!player.dead)saveGame({resumeRegion:world.currentRegion});});
 window.addEventListener("resize",resizeGameViewport);
 resizeGameViewport();
 buildWorld();resetPlayer();requestAnimationFrame(loop);
 
 // Expose a minimal diagnostic surface for automated smoke tests.
-window.__GAME__={animationRevision:'v1.1-preview5',getState:()=>({state,difficulty,dialogue:currentDialogue?.text||null,guidance:{title:guidance.title,timer:guidance.timer},camera:{x:cameraX},render:{alpha:renderAlpha,interpolated:getInterpolatedRenderState()},player:{x:player.x,y:player.y,groundY:player.groundY,health:player.health,paperBody:paperBodyState(),paperHurtFlash:player.paperHurtFlash||0,weapon:player.weapon?.type||null,lampHeld:player.lampHeld,grounded:player.grounded,dodging:player.dodging,guarding:player.guarding,attacking:!!player.attack,attackCharged:!!player.attack?.charged,attackKind:player.attack?.kind||null,attackStep:player.attack?.step||0,lampOrigin:lampPose(),checkpointX:player.checkpointX,checkpointY:player.checkpointY,dead:player.dead,deathPhase:player.deathPhase,deathVisualTimer:player.deathVisualTimer,interact:player.interactTarget?.kind||null,interactId:player.interactTarget?.obj?.id||null,interactCandidates:(player.interactCandidates||[]).map(t=>interactionTargetId(t)),interactIndex:player.interactIndex||0,hurtbox:getPlayerHurtbox(),hurtTimer:player.hurtTimer||0},world:{embers:world.emberCount,doorOpen:world.doorOpen,gateOpen:world.gateOpen,wallHp:world.wallHp,puzzleStep:world.puzzleStep,bossActive:world.bossActive,bossDefeated:world.bossDefeated,currentRegion:world.currentRegion,lanternsRecovered:world.lanternsRecovered,finalReady:world.finalReady,finalChoice:world.finalChoice,endingChoiceActive:world.endingChoiceActive,endingChoiceIndex:world.endingChoiceIndex,epilogueActive:world.epilogueActive,epilogueBeat:world.epilogueBeat,epilogueComplete:world.epilogueComplete,chapterProgress:JSON.parse(JSON.stringify(world.chapterProgress)),tutorialFlags:{...world.tutorialFlags},storyApparitions:Object.keys(world.storyRuntime?.active||{}),ritualBladeUnlocked:world.ritualBladeUnlocked,bossHp:world.boss?Math.max(0,Math.round(world.boss.hp)):null,bossPhase:world.boss?.phase||null,bossPendingPhase:world.boss?.pendingPhase||null,bossTransition:world.boss?.phaseTransition||0,bossLastAttack:world.boss?.lastAttackId||null,particles:world.particles.length,projectiles:world.projectiles.length,lanternStable:world.lamp.stable,firstEncounterStarted:world.firstEncounterStarted,firstShadowDefeated:world.firstShadowDefeated,enemiesAlive:world.enemies.filter(e=>e.alive).length,drops:world.drops.map(d=>({type:d.type,x:Math.round(d.x),y:Math.round(d.y)})),nearEnemies:world.enemies.filter(e=>e.alive&&!e.inactive&&Math.abs(e.x-player.x)<180).map(e=>({type:e.type,hp:Math.round(e.hp),x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,aiState:e.aiState,exposed:e.exposed})),enemies:world.enemies.filter(e=>e.alive).map(e=>({id:e.id,type:e.type,x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,grounded:e.grounded,aiState:e.aiState,stuckTimer:e.stuckTimer||0}))},errors:window.__GAME_ERRORS__||[]}),start:startGame,teleport:(x,y=480)=>{player.x=x;player.y=y;player.vx=player.vy=0;const g=getPrimaryGroundAt(player.x+player.w*.5);if(g){player.y=g.y-player.h;player.grounded=true;}},damage:damagePlayer};
+window.__GAME__={animationRevision:'v1.1-preview6',getState:()=>({state,difficulty,dialogue:currentDialogue?.text||null,guidance:{title:guidance.title,timer:guidance.timer},camera:{x:cameraX},render:{alpha:renderAlpha,interpolated:getInterpolatedRenderState()},player:{x:player.x,y:player.y,groundY:player.groundY,health:player.health,paperBody:paperBodyState(),paperHurtFlash:player.paperHurtFlash||0,weapon:player.weapon?.type||null,lampHeld:player.lampHeld,grounded:player.grounded,dodging:player.dodging,guarding:player.guarding,attacking:!!player.attack,attackCharged:!!player.attack?.charged,attackKind:player.attack?.kind||null,attackStep:player.attack?.step||0,lampOrigin:lampPose(),checkpointX:player.checkpointX,checkpointY:player.checkpointY,dead:player.dead,deathPhase:player.deathPhase,deathVisualTimer:player.deathVisualTimer,interact:player.interactTarget?.kind||null,interactId:player.interactTarget?.obj?.id||null,interactCandidates:(player.interactCandidates||[]).map(t=>interactionTargetId(t)),interactIndex:player.interactIndex||0,hurtbox:getPlayerHurtbox(),hurtTimer:player.hurtTimer||0},world:{embers:world.emberCount,doorOpen:world.doorOpen,gateOpen:world.gateOpen,wallHp:world.wallHp,puzzleStep:world.puzzleStep,bossActive:world.bossActive,bossDefeated:world.bossDefeated,currentRegion:world.currentRegion,lanternsRecovered:world.lanternsRecovered,finalReady:world.finalReady,finalChoice:world.finalChoice,endingChoiceActive:world.endingChoiceActive,endingChoiceIndex:world.endingChoiceIndex,epilogueActive:world.epilogueActive,epilogueBeat:world.epilogueBeat,epilogueComplete:world.epilogueComplete,chapterProgress:JSON.parse(JSON.stringify(world.chapterProgress)),tutorialFlags:{...world.tutorialFlags},storyApparitions:Object.keys(world.storyRuntime?.active||{}),ritualBladeUnlocked:world.ritualBladeUnlocked,bossHp:world.boss?Math.max(0,Math.round(world.boss.hp)):null,bossPhase:world.boss?.phase||null,bossPendingPhase:world.boss?.pendingPhase||null,bossTransition:world.boss?.phaseTransition||0,bossLastAttack:world.boss?.lastAttackId||null,particles:world.particles.length,projectiles:world.projectiles.length,lanternStable:world.lamp.stable,firstEncounterStarted:world.firstEncounterStarted,firstShadowDefeated:world.firstShadowDefeated,enemiesAlive:world.enemies.filter(e=>e.alive).length,drops:world.drops.map(d=>({type:d.type,x:Math.round(d.x),y:Math.round(d.y)})),nearEnemies:world.enemies.filter(e=>e.alive&&!e.inactive&&Math.abs(e.x-player.x)<180).map(e=>({type:e.type,hp:Math.round(e.hp),x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,aiState:e.aiState,exposed:e.exposed})),enemies:world.enemies.filter(e=>e.alive).map(e=>({id:e.id,type:e.type,x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,grounded:e.grounded,aiState:e.aiState,stuckTimer:e.stuckTimer||0}))},errors:window.__GAME_ERRORS__||[]}),start:startGame,teleport:(x,y=480)=>{player.x=x;player.y=y;player.vx=player.vy=0;const g=getPrimaryGroundAt(player.x+player.w*.5);if(g){player.y=g.y-player.h;player.grounded=true;}},damage:damagePlayer};
 window.__GAME_ERRORS__=[];
 window.__ASSET_STATUS__=()=>({loaded:artLoaded,total:Object.keys(artFiles).length,missing:missingRequiredAssets(),ready:requiredAssetsReady(),official:Object.values(artFiles).filter(src=>src.includes("assets/SeventhLantern/")).length});
 window.addEventListener("error",e=>window.__GAME_ERRORS__.push(String(e.error||e.message)));
