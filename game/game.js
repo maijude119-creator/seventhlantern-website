@@ -1794,6 +1794,12 @@ function completeChapter(id,dialogue){
   // The room, sound and lantern change are the chapter-completion narrative beat.
   if(id==="opera"&&!world.ritualBladeUnlocked&&!world.drops.some(d=>d.type==="ritual"))world.drops.push({x:9420,y:366,type:"ritual",bob:1.7});
   if(id==="final")world.finalReady=true;
+  // Post-solve quiet window: once a chapter's core mystery is resolved, any
+  // leftover encounter in that same region stands down. Backtracking becomes
+  // reflection/exploration instead of cleanup combat.
+  for(const e of world.enemies){
+    if(e.alive&&sceneRegionAt(e.x+e.w*.5).id===id){e.inactive=true;e.vx=0;e.attackTimer=0;}
+  }
   saveGame({resumeRegion:id});
 }
 
@@ -1970,7 +1976,10 @@ function handleChapterInteraction(obj){
     case "shenpo_city":{
       p.talked=true;
       if(p.solved){queueDialogue("沈婆",["空坟终于肯露出来了。", "我一路没告诉你它在等谁——因为我也怕自己说出口以后，它就成了真的。"]);break;}
-      queueDialogue("沈婆",["纸城会学活人的口气，连我的话也会学。", "你要是只信别人说的，就永远走不出这里。"]);
+      const memories=world.chapterProgress.story.memoryFinds?.length||0;
+      queueDialogue("沈婆",memories>=3?
+        ["你捡到的那些旧物，我认得几样。", "我当年也以为把它们分开藏起来，就等于没有骗你。现在看来，只是把一句谎拆成了五句。"]:
+        ["纸城会学活人的口气，连我的话也会学。", "你要是只信别人说的，就永远走不出这里。"]);
       break;
     }
     case "city_grave_0":case "city_grave_1":case "city_grave_2":{
@@ -2021,10 +2030,16 @@ function handleChapterInteraction(obj){
       break;
     }
 
-    case "nameless_final":
-      p.talked=true;queueDialogue("无名客",p.solved?
+    case "nameless_final":{
+      p.talked=true;
+      const memories=world.chapterProgress.story.memoryFinds?.length||0;
+      queueDialogue("无名客",p.solved?
         ["剩下的已经不是我能替你决定的。"]:
-        ["到这里，别再问我。", "如果还需要我告诉你谁是第七个，那前面的路就都白走了。"]);break;
+        memories>=5?
+          ["你把那些没人要求你捡的东西也带到了这里。", "那就好。谜题只会告诉你机关怎么开，旧物才会告诉你为什么有人非要把它关上。","现在别问我谁是第七个。你已经知道该相信哪一类证据。"]:
+          ["到这里，别再问我。", "如果还需要我告诉你谁是第七个，那前面的路就都白走了。"]);
+      break;
+    }
     case "final_mirror":{
       if(!lampIsFocused()){showToast("照魂镜需要你把引路灯真正举起来");break;}
       if(!p.convergenceStarted){
