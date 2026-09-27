@@ -1600,7 +1600,7 @@ function processAttack(){
       }
       return;
     }
-    a.hit.add(world.boss); world.boss.hp-=a.damage; world.boss.hurt=.16; sound.hit();
+    a.hit.add(world.boss); world.boss.hp-=a.damage; world.boss.hurt=.16; sound.bossHit(!!a.charged);
     bossNarrativeBeat(world.boss,"first_hit","“阿砚。”");
     hitStop=Math.max(hitStop,a.charged ? .075 : .045);shake=Math.max(shake,a.charged?9:6);impactFlash=Math.max(impactFlash,a.charged ? .10 : .065);
     const hx=bossHurtbox.x+bossHurtbox.w*.5,hy=bossHurtbox.y+bossHurtbox.h*.55;
@@ -2500,14 +2500,15 @@ function updatePlayer(dt){
     showGuidance("裂墙挡路","长按 J 蓄力，松开后用重击破坏已经开裂的旧砖墙","长按 J · 蓄力攻击",5.5);
   }
   player.x=clamp(player.x,0,world.width-player.w);
-  player.y+=player.vy*dt; player.grounded=false;
+  player.y+=player.vy*dt; player.grounded=false;let landedSurface="stone";
   for(const p of world.platforms){
     if(player.x+player.w>p.x&&player.x<p.x+p.w&&player.vy>=0&&prevY+player.h<=p.y+8&&player.y+player.h>=p.y){
-      player.y=p.y-player.h; player.vy=0; player.grounded=true;player.groundY=p.y;player.currentGroundId=p.id;
+      player.y=p.y-player.h; player.vy=0; player.grounded=true;player.groundY=p.y;player.currentGroundId=p.id;landedSurface=p.kind||p.surfaceType||"stone";
       player.lastValidGroundPosition={x:player.x,y:player.y,groundY:p.y};
       if(player.attack&&player.attack.kind==="plunge"){ shake=8; createBurst(player.x+20,player.y+72,"#d6cbbb",8); }
     }
   }
+  if(!wasGrounded&&player.grounded&&fallSpeed>145)sound.land(fallSpeed,landedSurface);
   if(window.Motion)window.Motion.PlayerController.afterCollision(dt,wasGrounded,fallSpeed);
   if(player.y>760){
     const safe=player.lastValidGroundPosition;
@@ -2671,7 +2672,7 @@ function updateProjectiles(dt){
       } }
       const bossBox=getBossHurtbox(world.boss);
       if(world.bossActive&&world.boss&&!world.bossDefeated&&world.boss.phaseTransition<=0&&!p.hitTargets.has(world.boss)&&bossBox&&rectsOverlap({x:p.x-p.r,y:p.y-p.r,w:p.r*2,h:p.r*2},bossBox)){
-        p.hitTargets.add(world.boss);if(world.boss.voiceTrial){p.life=0;continue;}world.boss.hp-=p.damage;sound.hit();bossNarrativeBeat(world.boss,"first_hit","“阿砚。”");hitStop=Math.max(hitStop,.028);shake=Math.max(shake,4);
+        p.hitTargets.add(world.boss);if(world.boss.voiceTrial){p.life=0;continue;}world.boss.hp-=p.damage;sound.bossHit(false);bossNarrativeBeat(world.boss,"first_hit","“阿砚。”");hitStop=Math.max(hitStop,.028);shake=Math.max(shake,4);
         if((p.pierce||0)>0)p.pierce--;else p.life=0;if(world.boss.hp<=0)defeatBoss();
       }
     }
@@ -2744,7 +2745,7 @@ function queueBossAttack(b){
 function bossAttack(b){
   const attackId=b.queuedAttackId||chooseBossAttack(b);
   b.lastAttackId=attackId;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphLabel="";
-  b.attackFlash=.32;shake=Math.max(shake,5.5);sound.play("boss_attack",{volume:.50});
+  b.attackFlash=.32;shake=Math.max(shake,5.5);sound.bossAttack(b.telegraphKind||(/Wave/.test(attackId)?"ground":/dash/i.test(attackId)?"dash":"volley"));
   if(/Wave/.test(attackId)||attackId==="fanWave")kickCamera(0,5);
   else if(/dash/i.test(attackId))kickCamera((b.telegraphDir||-1)*6,-2);
   else kickCamera((b.telegraphDir||-1)*2.5,-1);
@@ -2797,7 +2798,7 @@ function updateBoss(dt){
     b.pendingPhase=desiredPhase;b.transitionFrom=b.phase;b.transitionTo=desiredPhase;
     b.phaseTransition=b.phaseTransitionTotal||.58;b.windup=0;b.dash=0;b.timer=.55;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphLabel="";b.telegraphTotal=0;
     showToast(desiredPhase===2?"戏台展开，满城低语从灯幕后涌出":"灯幕伏地，黑灯开始追猎",2.4);
-    window.AudioManager?.play('boss_phase_change',{volume:.42});
+    sound.bossPhase();
     if(desiredPhase===2){window.AudioManager?.play('gong_low',{volume:.22});window.AudioManager?.play('temple_bell_far',{volume:.18});}
     if(desiredPhase===3){bossNarrativeBeat(b,"phase3","“不是你的名字。”");window.AudioManager?.play('ferry_water',{volume:.16});}
     shake=Math.max(shake,9);kickCamera(0,-7);impactFlash=Math.max(impactFlash,.07);
@@ -2833,7 +2834,7 @@ function updateBoss(dt){
     }
     for(let i=0;i<3;i++)b.voiceProbe[i]=clamp((b.voiceProbe[i]||0)+(active===i?dt:-dt*1.5),0,.8);
     if(active>=0&&b.voiceProbe[active]>.18&&!b.voiceRevealed[active]){
-      b.voiceRevealed[active]=true;window.AudioManager?.play('boss_mouth_reveal',{volume:.42});
+      b.voiceRevealed[active]=true;sound.bossMouth();
       world.floaters.push({x:mouths[active].x,y:mouths[active].y-18,text:`“${mouths[active].label}……”`,life:1.35,max:1.35,vy:-12,color:active===1?"#ffe09a":"#a98b82"});
     }
     if(active>=0&&b.voiceProbe[active]>.58){
@@ -2869,7 +2870,7 @@ function defeatBoss(){
   if(!b||b.dying||world.bossDefeated)return;
   b.hp=0;b.dying=true;b.deathTotal=.92;b.deathTimer=b.deathTotal;
   b.windup=0;b.dash=0;b.queuedAttackId=null;b.telegraphKind=null;
-  world.projectiles=[];world.fields=[];shake=25;sound.play("boss_death",{volume:.62});
+  world.projectiles=[];world.fields=[];shake=22;sound.bossDeath();
   createBurst(b.x+b.w*.5,b.y+b.h*.48,"#e7bb58",22);
 }
 function finalizeBossDefeat(){
@@ -2950,7 +2951,7 @@ function update(dt){
   updateChapterMechanisms(dt);updatePlayer(dt);updateEpilogue(dt);
   if(["opera","bamboo","ferry","city","final"].includes(world.currentRegion)&&!world.bossActive&&!world.epilogueActive&&!player.attack&&!player.charging&&Math.abs(player.vx)<24)routeHintIdle=Math.min(9,routeHintIdle+dt);
   else routeHintIdle=Math.max(0,routeHintIdle-dt*2.5);
-  if(player.grounded&&Math.abs(player.vx)>65&&!player.dodging){sound.stepTimer-=dt;if(sound.stepTimer<=0){const g=getPrimaryGroundAt(player.x+player.w*.5);sound.footstep(g?.kind||g?.surfaceType||"stone");sound.stepTimer=Math.abs(player.vx)>175?.22:.31;}}else sound.stepTimer=Math.min(sound.stepTimer,.08);
+  if(player.grounded&&Math.abs(player.vx)>65&&!player.dodging){sound.stepTimer-=dt;if(sound.stepTimer<=0){const g=getPrimaryGroundAt(player.x+player.w*.5);sound.footstep(g?.kind||g?.surfaceType||"stone",Math.abs(player.vx));sound.stepTimer=Math.abs(player.vx)>175?.22:.31;}}else sound.stepTimer=Math.min(sound.stepTimer,.08);
   if(!world.epilogueActive){
     updateEnemies(dt);
     const pressure=world.enemies.filter(e=>e.alive&&!e.inactive&&Math.abs(e.x-player.x)<190).length;
