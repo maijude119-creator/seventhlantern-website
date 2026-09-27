@@ -49,6 +49,13 @@ const MEMORY_ARCHIVE=[
   {id:"city_paper_crane",chapter:"幽都纸城",title:"压扁的纸鹤",text:"纸鹤里藏着一句没写完的“我叫阿——”。"},
   {id:"final_blank_tag",chapter:"第七灯域",title:"烧白的空名签",text:"没有旧名与死亡年月，却缝着和纸扎铺旧照片一样的红线。"}
 ];
+const ECHO_ARCHIVE=[
+  {id:"echo_opera_name",chapter:"无面戏楼",title:"反写戏名",text:"戏台写下“阿砚已经来过”，像是在记录上一周目。"},
+  {id:"echo_bamboo_bell",chapter:"倒悬竹寺",title:"水下钟影",text:"水中出现不存在的第四口钟，只留下已经发生过一次的回声。"},
+  {id:"echo_ferry_song",chapter:"逆流古渡",title:"船底童谣",text:"童谣唱着“回来的人，不算第一次上船”。"},
+  {id:"echo_city_backtext",chapter:"幽都纸城",title:"反面碑文",text:"碑背记着一个死过一次、又从开头回来的行人。"},
+  {id:"echo_final_name",chapter:"第七灯域",title:"镜后名字",text:"照魂镜第一次把“玩家”写进了无阴镇的记录。"}
+];
 function persistSettings(){
   try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(gameSettings));}catch(_e){}
   window.AudioManager?.setVolumes?.({master:gameSettings.master,sfx:gameSettings.sfx,ambience:gameSettings.ambience});
@@ -81,13 +88,19 @@ function renderArchive(){
   if(!archiveGrid||!archiveSummary)return;
   const current=world?.chapterProgress?.story?.memoryFinds||[];
   const found=new Set([...(metaProgress.memoryFinds||[]),...current]);
+  const currentEcho=world?.chapterProgress?.story?.echoFinds||[];
+  const echoFound=new Set([...(metaProgress.echoFinds||[]),...currentEcho]);
   const visited=new Set([...(metaProgress.visitedRegions||[]),...Object.keys(world?.visitedRegions||{}).filter(k=>world.visitedRegions[k])]);
-  archiveSummary.innerHTML=`<span>旧事残片 ${found.size}/5</span><span>到访区域 ${visited.size}</span><span>通关 ${metaProgress.completions||0} 次</span><span>结局 ${(metaProgress.endings||[]).length}/3</span><span>回响通关 ${metaProgress.echoClears||0} 次</span><span>最快通关 ${formatRunTime(metaProgress.bestClearMs)}</span><span>累计死亡 ${metaProgress.totalDeaths||0}</span>`;
-  const endingNames={keep:"名字留下",return:"记忆归灯",extinguish:"第七盏灯熄灭"};
+  const endingTotal=metaProgress.completed?4:3;
+  archiveSummary.innerHTML=`<span>旧事残片 ${found.size}/5</span><span>回响痕迹 ${echoFound.size}/5</span><span>到访区域 ${visited.size}</span><span>通关 ${metaProgress.completions||0} 次</span><span>结局 ${(metaProgress.endings||[]).length}/${endingTotal}</span><span>回响通关 ${metaProgress.echoClears||0} 次</span><span>最快通关 ${formatRunTime(metaProgress.bestClearMs)}</span><span>累计死亡 ${metaProgress.totalDeaths||0}</span>`;
+  const endingNames={keep:"名字留下",return:"记忆归灯",extinguish:"第七盏灯熄灭",remember:"第七个人被记住"};
   const memories=MEMORY_ARCHIVE.map((m,i)=>found.has(m.id)?
     `<article class="archive-card found"><small>${m.chapter}</small><b>${i+1}. ${m.title}</b><p>${m.text}</p><span class="archive-seal">已拾</span></article>`:
     `<article class="archive-card locked"><small>${m.chapter}</small><b>${i+1}. ？？？？</b><p>这段旧事还留在无阴镇的某个角落。</p></article>`).join("");
-  const endings=Object.entries(endingNames).map(([id,name])=>metaProgress.endings.includes(id)?
+  const echoMemories=metaProgress.completed?ECHO_ARCHIVE.map((m,i)=>echoFound.has(m.id)?
+    `<article class="archive-card found"><small>回响 · ${m.chapter}</small><b>${i+1}. ${m.title}</b><p>${m.text}</p><span class="archive-seal">回响</span></article>`:
+    `<article class="archive-card locked"><small>回响 · ${m.chapter}</small><b>${i+1}. ？？？？</b><p>只有二周目举灯时才能看见。</p></article>`).join(""):"";
+  const endings=Object.entries(endingNames).filter(([id])=>id!=="remember"||metaProgress.completed).map(([id,name])=>metaProgress.endings.includes(id)?
     `<article class="archive-card found"><small>终局记录</small><b>${name}</b><p>这个选择已经被无阴镇记住。</p><span class="archive-seal">已见</span></article>`:
     `<article class="archive-card locked"><small>终局记录</small><b>？？？？</b><p>还有一种结局没有被你亲自走到。</p></article>`).join("");
   const echo=metaProgress.completed?(metaProgress.echoClears>0?
@@ -95,7 +108,7 @@ function renderArchive(){
     `<article class="archive-card"><small>二周目</small><b>回响模式已解锁</b><p>更高敌人压力、更多战斗组合、无谜题失败提示。</p></article>`):"";
   const last=metaProgress.lastClear;
   const lastCard=last?`<article class="archive-card found"><small>最近一次通关</small><b>${difficultyValues[last.difficulty]?.label||last.difficulty} · ${endingNames[last.ending]||"未知结局"}</b><p>用时 ${formatRunTime(last.playMs)}　死亡 ${last.deaths||0}　受击 ${last.hitsTaken||0}　旧事 ${last.memories||0}/5</p><span class="archive-seal">记录</span></article>`:"";
-  archiveGrid.innerHTML=lastCard+memories+endings+echo;
+  archiveGrid.innerHTML=lastCard+memories+echoMemories+endings+echo;
 }
 persistSettings();refreshMetaButtons();
 
