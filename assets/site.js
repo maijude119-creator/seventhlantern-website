@@ -25,13 +25,40 @@
     Object.entries(labels).forEach(([k,label])=>{const a=document.createElement(cfg.socials?.[k]?'a':'span');a.className='social-pill'+(cfg.socials?.[k]?' enabled':'');a.textContent=label+(cfg.socials?.[k]?'':' · 待填写');if(cfg.socials?.[k]){a.href=cfg.socials[k];a.target='_blank';a.rel='noopener'}socials.appendChild(a)});
   }
 
-  const feedback=document.getElementById('feedbackForm');
-  if(feedback) feedback.addEventListener('submit',e=>{e.preventDefault();const data=Object.fromEntries(new FormData(feedback));const all=JSON.parse(localStorage.getItem('seventh-feedback')||'[]');all.unshift({...data,at:new Date().toISOString()});localStorage.setItem('seventh-feedback',JSON.stringify(all));feedback.reset();const n=document.getElementById('feedbackNote');n.textContent='已保存到当前浏览器。接入线上数据库后，这里会直接发送给买橘的。';n.style.color='#cda06c'});
+  const privateFeedbackButton=document.getElementById('privateFeedbackButton');
+  privateFeedbackButton?.addEventListener('click',()=>{
+    const n=document.getElementById('feedbackNote');
+    if(n){n.textContent='私密反馈后台还没有接入持久化数据库，因此当前不会收集或伪装保存你的内容。';n.style.color='#d0aa79';}
+  });
 
-  const guest=document.getElementById('guestbookForm'),messages=document.getElementById('messages');
-  const seed=[{name:'过路人',message:'灯还亮着，就继续往前。',at:'2026-09-24'},{name:'无名纸签',message:'最喜欢雨巷和古渡的氛围。',at:'2026-09-24'}];
-  const renderMessages=()=>{if(!messages)return;const all=JSON.parse(localStorage.getItem('seventh-guestbook')||'null')||seed;messages.innerHTML='';all.slice(0,12).forEach(m=>{const el=document.createElement('article');el.className='message';el.innerHTML=`<b>${escapeHtml(m.name||'无名客')}</b><time>${escapeHtml((m.at||'').slice(0,10))}</time><p>${escapeHtml(m.message||'')}</p>`;messages.appendChild(el)})};
-  if(guest){renderMessages();guest.addEventListener('submit',e=>{e.preventDefault();const d=Object.fromEntries(new FormData(guest));const all=JSON.parse(localStorage.getItem('seventh-guestbook')||'null')||seed;all.unshift({name:(d.name||'无名客').trim()||'无名客',message:(d.message||'').trim(),at:new Date().toISOString()});localStorage.setItem('seventh-guestbook',JSON.stringify(all.slice(0,30)));guest.reset();renderMessages()})}
+  const messages=document.getElementById('messages');
+  const guestbookStatus=document.getElementById('guestbookStatus');
+  async function loadGuestbook(){
+    if(!messages)return;
+    messages.innerHTML='<article class="message"><p>正在读取无阴镇的线上纸签……</p></article>';
+    try{
+      const r=await fetch('https://api.github.com/repos/maijude119-creator/seventhlantern-website/issues?state=open&per_page=40',{headers:{Accept:'application/vnd.github+json'}});
+      if(!r.ok)throw new Error('guestbook');
+      const issues=(await r.json()).filter(x=>!x.pull_request&&/^\[留言\]/.test(x.title||'')).slice(0,12);
+      messages.innerHTML='';
+      if(!issues.length){
+        messages.innerHTML='<article class="message"><b>第一张纸签还没出现</b><p>你可以成为第一个在这里留下话的人。</p></article>';
+      }else{
+        issues.forEach(x=>{
+          const el=document.createElement('article');el.className='message';
+          const body=String(x.body||'').replace(/<!--.*?-->/gs,'').replace(/[#>*_\`\[\]-]/g,' ').replace(/\s+/g,' ').trim();
+          const clean=body.length>190?body.slice(0,190)+'…':body;
+          el.innerHTML='<b>'+escapeHtml(x.user?.login||'无名客')+'</b><time>'+escapeHtml((x.created_at||'').slice(0,10))+'</time><p>'+escapeHtml(clean||x.title.replace(/^\[留言\]\s*/,''))+'</p><a class="message-link" href="'+x.html_url+'" target="_blank" rel="noopener">查看纸签 →</a>';
+          messages.appendChild(el);
+        });
+      }
+      if(guestbookStatus)guestbookStatus.textContent='线上留言 · '+issues.length+' 张';
+    }catch(e){
+      messages.innerHTML='<article class="message"><b>纸签读取失败</b><p>GitHub 暂时没有回应，可以稍后刷新；留言本身仍保存在 GitHub。</p></article>';
+      if(guestbookStatus)guestbookStatus.textContent='线上留言暂时读取失败';
+    }
+  }
+  loadGuestbook();
   function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 
   async function loadRelease(){
