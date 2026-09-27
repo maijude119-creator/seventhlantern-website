@@ -38,6 +38,7 @@
     playerLastX: null,
     moveMode: "idle",
     moveTimer: 0,
+    gaitMode: "walk",
     enemyMotion: new WeakMap(),
     bossMotion: new WeakMap()
   };
@@ -165,7 +166,9 @@
       // so low frame rate cannot make a stationary enemy run in place.
       previous.walkPhase += travelled * 0.115;
       previous.lastX = e.x;
-      previous.state = e.aiState || previous.state || "IDLE";
+      const nextState=e.aiState||previous.state||"IDLE";
+      if(nextState!==previous.state){previous.state=nextState;previous.animTime=0;}
+      else previous.animTime=(previous.animTime||0)+dt;
       previous.notice = previous.state === "NOTICE" ? Math.max(previous.notice || 0, e.stateTimer || 0) : 0;
       state.enemyMotion.set(e, previous);
     }
@@ -173,7 +176,7 @@
   M.resetEnemyMotion = (e) => {
     if (!e) return;
     state.enemyMotion.delete(e);
-    state.enemyMotion.set(e,{state:e.aiState||"IDLE",notice:0,lastX:e.x||0,walkPhase:0});
+    state.enemyMotion.set(e,{state:e.aiState||"IDLE",notice:0,lastX:e.x||0,walkPhase:0,animTime:0});
   };
 
   M.afterUpdate = (dt) => {
@@ -202,23 +205,25 @@
   function playerMotionState(){
     const p=player||{};
     const phase=state.playerPhase||0;
-    if(p.dead)return {mode:"dead",phase,airMode:null};
-    if((p.hurtTimer||0)>0)return {mode:"hurt",phase,airMode:null};
-    if(p.attack)return {mode:"attack",phase,airMode:null};
+    if(p.dead)return {mode:"dead",phase,airMode:null,gait:state.gaitMode};
+    if((p.hurtTimer||0)>0)return {mode:"hurt",phase,airMode:null,gait:state.gaitMode};
+    if(p.attack)return {mode:"attack",phase,airMode:null,gait:state.gaitMode};
     if(!p.grounded){
       const airMode=(p.vy||0)<-120?"rise":(p.vy||0)>120?"fall":"apex";
-      return {mode:"air",phase,airMode};
+      return {mode:"air",phase,airMode,gait:state.gaitMode};
     }
-    if((state.landing||0)>0)return {mode:"land",phase,airMode:null};
+    if((state.landing||0)>0)return {mode:"land",phase,airMode:null,gait:state.gaitMode};
     const speed=Math.abs(p.vx||0);
-    if((state.turn||0)>0&&speed>8)return {mode:"turn",phase,airMode:null};
+    if(state.gaitMode==="run"){if(speed<148)state.gaitMode="walk";}
+    else if(speed>182)state.gaitMode="run";
+    if((state.turn||0)>0&&speed>8)return {mode:"turn",phase,airMode:null,gait:state.gaitMode};
     // Keep the same speed thresholds for state selection and sprite selection.
     // Start/stop retain the distance-driven cycle, so feet decelerate with the body.
-    if((state.inputMove||0)!==0&&speed>8&&state.locomotionBlend<.34)return {mode:"startMove",phase,airMode:null};
-    if((state.inputMove||0)===0&&speed>8)return {mode:"stopMove",phase,airMode:null};
-    if(speed>28)return {mode:"move",phase,airMode:null};
-    if(speed>8)return {mode:"stopMove",phase,airMode:null};
-    return {mode:"idle",phase,airMode:null};
+    if((state.inputMove||0)!==0&&speed>8&&state.locomotionBlend<.34)return {mode:"startMove",phase,airMode:null,gait:state.gaitMode};
+    if((state.inputMove||0)===0&&speed>8)return {mode:"stopMove",phase,airMode:null,gait:state.gaitMode};
+    if(speed>28)return {mode:"move",phase,airMode:null,gait:state.gaitMode};
+    if(speed>8)return {mode:"stopMove",phase,airMode:null,gait:state.gaitMode};
+    return {mode:"idle",phase,airMode:null,gait:state.gaitMode};
   }
   M.getPlayerMotionState=()=>({...playerMotionState(),landTimer:state.landing||0,turnTimer:state.turn||0});
 
@@ -280,7 +285,7 @@
     }else if(["CHASE","PATROL"].includes(ai)&&Math.abs(e?.vx||0)>8)mode="move";
     else if(ai==="TURN"||ai==="BLOCKED")mode="turn";
     else if(ai==="NOTICE")mode="notice";
-    return {mode,phase:m?.walkPhase||0,stageProgress,attackProgress:clamp(attackProgress,0,1),ai};
+    return {mode,phase:m?.walkPhase||0,animTime:m?.animTime||0,stageProgress,attackProgress:clamp(attackProgress,0,1),ai};
   }
   M.getEnemyMotionState=(e)=>({...enemyMotionState(e)});
 
