@@ -1,0 +1,78 @@
+/* website v2.4 · interactive lantern hero */
+.hero{--hero-x:72%;--hero-y:42%;--lamp-shift-x:0px;--lamp-shift-y:0px}
+.hero-interactive-light{
+  position:absolute;z-index:2;inset:0;pointer-events:none;
+  background:radial-gradient(circle 250px at var(--hero-x) var(--hero-y),rgba(226,154,74,.12),rgba(150,58,31,.05) 38%,transparent 72%);
+  opacity:.58;transition:opacity .3s ease
+}
+.hero:hover .hero-interactive-light{opacity:.9}
+.lantern-trigger{
+  position:absolute;z-index:5;right:12.5%;top:30%;width:150px;height:150px;border:0;border-radius:50%;
+  cursor:pointer;background:transparent;color:#e7c38f;display:grid;place-items:center;transform:translate3d(var(--lamp-shift-x),var(--lamp-shift-y),0);
+  transition:transform .2s ease,filter .3s ease
+}
+.lantern-trigger:before{
+  content:"";position:absolute;inset:23px;border:1px solid rgba(215,161,91,.34);border-radius:50%;
+  background:radial-gradient(circle,rgba(242,181,91,.2),rgba(153,59,31,.08) 38%,transparent 68%);
+  box-shadow:0 0 34px rgba(216,133,58,.12),inset 0 0 24px rgba(214,126,53,.08);
+  animation:lanternBreathe 2.8s ease-in-out infinite
+}
+.lantern-trigger:after{
+  content:"";position:absolute;inset:43px;border-radius:50%;background:radial-gradient(circle,#f3d28d 0 7%,#d88a42 16%,#8d321f 38%,transparent 68%);
+  opacity:.72;filter:blur(.2px);box-shadow:0 0 26px rgba(221,142,58,.32)
+}
+@keyframes lanternBreathe{50%{transform:scale(1.07);border-color:rgba(225,184,115,.56);box-shadow:0 0 48px rgba(216,133,58,.2),inset 0 0 28px rgba(214,126,53,.12)}}
+.lantern-trigger .lantern-ring{position:absolute;inset:6px;border:1px solid rgba(183,67,52,.22);border-radius:50%;opacity:.65}
+.lantern-trigger .lantern-ring:before,.lantern-trigger .lantern-ring:after{content:"";position:absolute;left:50%;top:50%;background:rgba(215,161,91,.24);transform:translate(-50%,-50%)}
+.lantern-trigger .lantern-ring:before{width:118%;height:1px}.lantern-trigger .lantern-ring:after{width:1px;height:118%}
+.lantern-trigger .lantern-hint{
+  position:absolute;top:calc(100% - 8px);left:50%;transform:translateX(-50%);white-space:nowrap;
+  display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid rgba(215,161,91,.22);
+  background:rgba(7,9,12,.72);backdrop-filter:blur(8px);font-size:9px;letter-spacing:.12em;color:#b9a98f
+}
+.lantern-trigger .lantern-hint kbd{min-width:22px;height:20px;display:inline-grid;place-items:center;border:1px solid rgba(215,161,91,.34);background:#11100f;color:#e7c38f;font:10px Georgia,serif}
+.lantern-trigger:hover,.lantern-trigger:focus-visible{filter:drop-shadow(0 0 20px rgba(222,142,65,.34));outline:none}
+.lantern-trigger:focus-visible .lantern-hint{border-color:rgba(231,195,143,.55);color:#f0d8b5}
+
+.hero-lantern-panel{
+  position:absolute;z-index:6;right:max(56px,calc((100vw - var(--max))/2 + 58px));bottom:82px;width:min(410px,calc(100vw - 40px));
+  padding:22px;border:1px solid rgba(215,161,91,.28);background:linear-gradient(150deg,rgba(13,16,21,.95),rgba(24,14,13,.93));
+  box-shadow:0 24px 70px rgba(0,0,0,.48),0 0 42px rgba(157,48,41,.08);backdrop-filter:blur(15px);
+  opacity:0;visibility:hidden;transform:translateY(12px);transition:.28s ease
+}
+.hero-lantern-panel:before{content:"";position:absolute;inset:7px;border:1px solid rgba(184,130,75,.1);pointer-events:none}
+.hero-lantern-panel .panel-top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+.hero-lantern-panel .panel-kicker{margin:0 0 5px;color:#b4825e;font-size:9px;letter-spacing:.18em}
+.hero-lantern-panel h3{margin:0;font:500 24px var(--serif);color:#ecdabe}
+.hero-lantern-panel .panel-close{width:32px;height:32px;border:1px solid rgba(255,255,255,.08);background:#0d1015;color:#8e8579;cursor:pointer;font-size:17px}
+.hero-lantern-panel>p{margin:14px 0 18px;color:#998f82;font-size:11px;line-height:1.8}
+.hero-lantern-actions{display:grid;grid-template-columns:1.35fr 1fr;gap:8px}
+.hero-lantern-actions a{
+  min-height:47px;border:1px solid rgba(255,255,255,.08);background:#0e1116;color:#bcb1a0;display:flex;align-items:center;justify-content:center;
+  font-size:11px;letter-spacing:.04em;transition:.2s
+}
+.hero-lantern-actions a:first-child{grid-row:span 2;background:linear-gradient(145deg,#7c281f,#a43a2d);border-color:rgba(221,100,74,.52);color:#f1d9b3;font:500 15px var(--serif)}
+.hero-lantern-actions a:hover{transform:translateY(-1px);border-color:rgba(215,161,91,.42);color:#f2dec0}
+.hero.lantern-awake .hero-lantern-panel{opacity:1;visibility:visible;transform:none}
+.hero.lantern-awake .lantern-trigger:before{background:radial-gradient(circle,rgba(255,220,145,.42),rgba(205,105,42,.16) 40%,transparent 68%);box-shadow:0 0 80px rgba(230,151,67,.32),inset 0 0 36px rgba(226,149,69,.2)}
+.hero.lantern-awake .lantern-trigger:after{opacity:1;box-shadow:0 0 54px rgba(239,167,75,.55)}
+.hero.lantern-awake .hero-lantern-glow{opacity:1;filter:blur(7px)}
+.hero.lantern-awake .hero-copy h1 em{text-shadow:0 0 38px rgba(226,88,58,.72),0 8px 30px #000}
+.hero.lantern-awake .hero-actions .primary{box-shadow:0 18px 52px rgba(181,45,33,.48)}
+.hero.lantern-awake .hero-stamp{border-color:rgba(211,98,75,.78);box-shadow:0 0 28px rgba(160,46,35,.18),inset 0 0 20px rgba(134,39,31,.12)}
+.hero-lantern-status{position:absolute;z-index:4;right:10.5%;top:22%;font-size:8px;letter-spacing:.22em;color:rgba(218,177,119,.58);writing-mode:vertical-rl;pointer-events:none}
+.hero-lantern-status:before{content:"";display:block;width:1px;height:44px;margin:0 auto 8px;background:linear-gradient(transparent,#8e5038)}
+
+@media(max-width:1180px){.lantern-trigger{right:8.5%}.hero-lantern-panel{right:28px}}
+@media(max-width:760px){
+  .hero-interactive-light{display:none}
+  .lantern-trigger{right:12px;top:27%;width:104px;height:104px}
+  .lantern-trigger:before{inset:18px}.lantern-trigger:after{inset:31px}
+  .lantern-trigger .lantern-hint{top:calc(100% - 3px);font-size:8px;padding:5px 7px}.lantern-trigger .lantern-hint kbd{display:none}
+  .hero-lantern-status{display:none}
+  .hero-lantern-panel{left:18px;right:18px;bottom:72px;width:auto;padding:18px}
+  .hero-lantern-actions{grid-template-columns:1fr 1fr}
+  .hero-lantern-actions a:first-child{grid-row:auto;grid-column:1/-1}
+}
+@media(max-width:420px){.lantern-trigger{top:30%;width:88px;height:88px}.lantern-trigger .lantern-hint{display:none}.hero-lantern-panel{bottom:60px}}
+@media(prefers-reduced-motion:reduce){.lantern-trigger:before{animation:none}.lantern-trigger,.hero-lantern-panel{transition:none}}
