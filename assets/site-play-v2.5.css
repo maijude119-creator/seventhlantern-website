@@ -125,6 +125,9 @@
 }
 @media(max-width:680px){
   .play-page .play-bar{height:58px;padding:0 10px}
+  .play-page .play-tools #muteFrame{display:none}
+  .play-page .play-tools #fullscreenFrame{display:inline-flex;align-items:center}
+  .play-page .play-tools .return-site{display:inline-flex;align-items:center}
   .play-page .game-shell{height:calc(100vh - 58px)}
   .play-state{margin-left:6px!important}.play-tools{gap:5px!important}.play-tools a:not(.return-site){display:none}
   .play-launch-card{padding:29px 20px 25px;width:calc(100% - 28px)}
