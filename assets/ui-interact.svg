@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 120" fill="none">
+<defs><linearGradient id="i" x1="0" x2="1"><stop stop-color="#312018"/><stop offset=".5" stop-color="#a87843"/><stop offset="1" stop-color="#312018"/></linearGradient><filter id="ig"><feGaussianBlur stdDeviation="6"/></filter></defs>
+<rect x="9" y="16" width="342" height="88" rx="15" fill="#090b0f" fill-opacity=".88" stroke="url(#i)" stroke-width="3"/>
+<rect x="21" y="28" width="64" height="64" rx="12" fill="#11141a" stroke="#c08a4d" stroke-width="3"/>
+<text x="53" y="71" fill="#f0d4a2" font-size="34" font-family="Georgia,serif" text-anchor="middle">E</text>
+<path d="M100 60h29" stroke="#6e402f" stroke-width="2"/><circle cx="142" cy="60" r="5" fill="#c25139"/><text x="178" y="70" fill="#e8d9c2" font-size="28" font-family="serif">交互</text>
+<path opacity=".4" filter="url(#ig)" d="M135 100h120" stroke="#d06a3d" stroke-width="8"/>
+</svg>
