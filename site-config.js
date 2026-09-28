@@ -4,7 +4,7 @@
   version: "v1.0.0",
   windowsVersion: "v1.0.0",
   webGameVersion: "v5.2.0",
-  siteBuild: "v2.5.0",
+  siteBuild: "v2.6.0",
   releaseDate: "2026.09.27",
   download: {
     url: "https://github.com/maijude119-creator/seventhlantern-website/releases/download/v1.0.0/SeventhLantern_v1.0.0_Windows.zip",
@@ -26,4 +26,3 @@
     github: "https://github.com/maijude119-creator/seventhlantern-website"
   }
 };
-
