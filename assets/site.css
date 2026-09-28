@@ -252,3 +252,47 @@ body.nav-open{overflow:hidden}
   .feedback-panel,.guestbook-panel{padding:26px 20px}
   .community-section{padding-bottom:96px}
 }
+
+
+/* v2.0.1 card hardening */
+.world-track{width:100%;max-width:100%}
+.world-card{
+  display:block;position:relative;min-width:0;min-height:440px;
+  overflow:hidden;background:#101319!important;color:var(--text)!important;
+  border:1px solid rgba(255,255,255,.08)!important;
+}
+.world-card img{
+  position:absolute!important;inset:0!important;display:block!important;
+  width:100%!important;height:100%!important;max-width:none!important;
+  object-fit:cover!important;margin:0!important;border:0!important;
+}
+.world-card>div{
+  position:absolute!important;z-index:3!important;left:22px!important;right:22px!important;bottom:24px!important;
+  background:transparent!important;color:inherit!important;
+}
+.world-card h3,.world-card p,.world-card small{position:relative!important;margin-left:0!important;margin-right:0!important}
+.media-grid{align-items:stretch}
+.media-grid>.media-shot{
+  position:relative!important;display:block!important;width:100%!important;height:100%!important;min-width:0!important;
+  padding:0!important;margin:0!important;overflow:hidden!important;
+  border:1px solid rgba(255,255,255,.08)!important;background:#101319!important;color:#eee3ce!important;
+  font:inherit!important;text-align:left!important;border-radius:0!important;box-shadow:none!important;
+}
+.media-grid>.media-shot img{
+  position:absolute!important;inset:0!important;display:block!important;
+  width:100%!important;height:100%!important;max-width:none!important;object-fit:cover!important;
+  margin:0!important;border:0!important;
+}
+.media-grid>.media-shot:after{
+  content:""!important;position:absolute!important;z-index:1!important;inset:0!important;
+  background:linear-gradient(0deg,rgba(4,6,9,.76),transparent 50%)!important;
+}
+.media-grid>.media-shot span{
+  position:absolute!important;z-index:2!important;left:18px!important;right:auto!important;bottom:15px!important;
+  margin:0!important;padding:0!important;background:transparent!important;color:#eee0c8!important;
+  font:500 16px var(--serif)!important;line-height:1.2!important;white-space:nowrap!important;
+}
+@media(max-width:620px){
+  .world-card{min-height:390px}
+  .media-grid>.media-shot{min-height:210px}
+}
