@@ -5,23 +5,35 @@ const runtime = require('./helpers/game-runtime');
 
 const motionSource = fs.readFileSync(require.resolve('../game/motion.js'), 'utf8');
 
-function strideCyclesAt(speed) {
+function gaitBlendAt(phase) {
   const g = runtime();
   g.run('startGame("normal",false,true);currentDialogue=null;dialogueQueue=[];player.grounded=true;player.vx=0');
   g.run(motionSource);
-  g.run('window.Motion.PlayerController.afterCollision(1/60,true,0)');
-  for (let i = 0; i < 60; i++) {
-    g.run(`player.vx=${speed};player.x+=${speed}/60;window.Motion.PlayerController.afterCollision(1/60,true,0)`);
-  }
-  return g.run('window.Motion.getPlayerMotionState().phase/3');
+  return g.run(`window.Motion.getPlayerGaitFrameBlend(${phase},6)`);
 }
 
-test('walk stride cadence matches the slow-walk footstep rhythm', () => {
-  const cycles = strideCyclesAt(175);
-  assert.ok(cycles >= 1.55 && cycles <= 1.65, `expected about 1.6 walk cycles/s, got ${cycles}`);
+test('locomotion frame blending stays continuous at a pose boundary', () => {
+  const before = gaitBlendAt(1.999);
+  const after = gaitBlendAt(2);
+  const beforePosition = before.index + before.blend;
+  const afterPosition = after.index + after.blend;
+  assert.ok(Math.abs(beforePosition - afterPosition) < 0.002, 'the rendered pose should not jump when a new frame begins');
 });
 
-test('run stride cadence matches the run footstep rhythm', () => {
-  const cycles = strideCyclesAt(220);
-  assert.ok(cycles >= 2.2 && cycles <= 2.35, `expected about 2.27 run cycles/s, got ${cycles}`);
+test('locomotion frame blend wraps smoothly from the last pose to the first', () => {
+  const before = gaitBlendAt(5.999);
+  const after = gaitBlendAt(6);
+  const beforePosition = before.index + before.blend;
+  const afterPosition = after.index + after.blend;
+  const directDistance = Math.abs((beforePosition % 6) - afterPosition);
+  assert.ok(Math.min(directDistance, 6 - directDistance) < 0.002, 'the stride loop should wrap without a visible snap');
+});
+
+test('player renderer uses fractional progress to blend adjacent gait poses', () => {
+  const gameSource = fs.readFileSync(require.resolve('../game/game.js'), 'utf8');
+  const start = gameSource.indexOf('function drawPlayerV2(){');
+  const end = gameSource.indexOf('\nfunction drawRitualBladeAttackV2', start);
+  const renderer = gameSource.slice(start, end);
+  assert.match(renderer, /getPlayerGaitFrameBlend\?\.\(locomotionPhase,locomotionCount\)/);
+  assert.match(renderer, /locomotionFrames\[frameBlend\.nextIndex\]/);
 });

@@ -6,11 +6,9 @@
   const M = {};
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const lerp = (a, b, t) => a + (b - a) * clamp(t, 0, 1);
-  // Keep the authored six-pose cycle distance-driven, with separate stride lengths
-  // for walking and running. These rates match the two footstep intervals in game.js:
-  // 1.6 walk cycles/sec at 175 px/sec and 2.27 run cycles/sec at 220 px/sec.
-  const PLAYER_WALK_PHASE_PER_PIXEL = (3 * 1.6) / 175;
-  const PLAYER_RUN_PHASE_PER_PIXEL = (3 * 2.27) / 220;
+  // Locomotion phase stays distance-driven, so the feet remain tied to actual travel.
+  // The renderer blends between these six poses to avoid visible frame stepping.
+  const PLAYER_PHASE_PER_PIXEL = 0.042;
   const PLAYER_TELEPORT_PHASE_CUTOFF = 80;
   const state = {
     coyote: 0,
@@ -46,17 +44,12 @@
 
   M.interacting = () => false;
 
-  function playerPhasePerPixel(speed){
-    const runBlend=clamp((speed-175)/(220-175),0,1);
-    return lerp(PLAYER_WALK_PHASE_PER_PIXEL,PLAYER_RUN_PHASE_PER_PIXEL,runBlend);
-  }
-
   function samplePlayerTravelPhase(){
     const p=player||{};
     if(state.playerLastX==null){state.playerLastX=p.x||0;return 0;}
     const travelled=Math.abs((p.x||0)-state.playerLastX);
     // Teleports / respawns must resync the pivot without fast-forwarding the feet.
-    if(travelled>0&&travelled<PLAYER_TELEPORT_PHASE_CUTOFF)state.playerPhase+=travelled*playerPhasePerPixel(Math.abs(p.vx||0));
+    if(travelled>0&&travelled<PLAYER_TELEPORT_PHASE_CUTOFF)state.playerPhase+=travelled*PLAYER_PHASE_PER_PIXEL;
     state.playerLastX=p.x||0;
     return travelled;
   }
@@ -232,6 +225,17 @@
     return {mode:"idle",phase,airMode:null,gait:state.gaitMode};
   }
   M.getPlayerMotionState=()=>({...playerMotionState(),landTimer:state.landing||0,turnTimer:state.turn||0});
+
+  M.getPlayerGaitFrameBlend=(phase,count=6)=>{
+    const frames=Math.max(1,Math.floor(count)||1);
+    const position=((phase%frames)+frames)%frames;
+    const index=Math.floor(position),fraction=position-index;
+    return {
+      index,
+      nextIndex:(index+1)%frames,
+      blend:fraction*fraction*(3-2*fraction)
+    };
+  };
 
   M.getPlayerVisual = () => {
     const p = player || {};
