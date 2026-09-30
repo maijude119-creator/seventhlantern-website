@@ -1,0 +1,58 @@
+name: Publish Windows v1.1.0
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/windows-v1.1.0.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-v1.1.0
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify game and package checks
+        run: node --test tests/*.test.js
+      - name: Build and validate Windows archive
+        run: |
+          bash scripts/package-windows.sh
+          unzip -tq dist/SeventhLantern_v1.1.0_Windows.zip
+          cd dist
+          sha256sum SeventhLantern_v1.1.0_Windows.zip > SHA256SUMS.txt
+      - name: Publish versioned release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if gh release view v1.1.0 >/dev/null 2>&1; then
+            echo "Release v1.1.0 already exists; refusing to overwrite its assets."
+            exit 1
+          fi
+          cat > dist/release-notes.md <<'NOTES'
+          Windows v1.1.0 · 游戏内容 v5.3.0
+
+          - 同步最新命中、击败、Boss 预警与阶段转换特效。
+          - 支持减少动态效果，修复重开与复活后的残留特效。
+          - 完整解压后运行 00_START_GAME.bat 或 index.html。
+          - SHA256SUMS.txt 提供下载文件的完整性校验值。
+          NOTES
+          gh release create v1.1.0 \
+            dist/SeventhLantern_v1.1.0_Windows.zip dist/SHA256SUMS.txt \
+            --target "$RELEASE_COMMIT" \
+            --title "第7盏灯 Windows v1.1.0 · 游戏 v5.3.0" \
+            --notes-file dist/release-notes.md \
+            --latest
