@@ -1481,11 +1481,35 @@ function lampPose(){
   const anchor=held?playerLanternAnchor():{x:world.lamp.x,y:world.lamp.y};
   return {x:anchor.x,y:anchor.y,angle:base+world.lamp.angle};
 }
-function lampHitsPoint(px,py,range=330){
+const LAMP_BEAM_RANGE=330,LAMP_BEAM_HALF_ANGLE=.56;
+function segmentIntersectsRect(x1,y1,x2,y2,rect){
+  const dx=x2-x1,dy=y2-y1;
+  let near=0,far=1;
+  for(const [origin,delta,min,max] of [[x1,dx,rect.x,rect.x+rect.w],[y1,dy,rect.y,rect.y+rect.h]]){
+    if(Math.abs(delta)<1e-8){if(origin<min||origin>max)return false;continue;}
+    let a=(min-origin)/delta,b=(max-origin)/delta;if(a>b)[a,b]=[b,a];
+    near=Math.max(near,a);far=Math.min(far,b);if(near>far)return false;
+  }
+  return far>=0&&near<.999;
+}
+function lampBeamReach(maxLen=LAMP_BEAM_RANGE,angle=null,origin=null){
+  const p=origin||lampPose(),beamAngle=angle??p.angle,walls=getBlockingWalls(),step=12;
+  for(let d=24;d<=maxLen;d+=step){
+    const sx=p.x+Math.cos(beamAngle)*d,sy=p.y+Math.sin(beamAngle)*d;
+    if(walls.some(w=>sx>=w.x&&sx<=w.x+w.w&&sy>=w.y&&sy<=w.y+w.h))return Math.max(48,d-step);
+  }
+  return maxLen;
+}
+function lampBeamGeometry(){
+  const p=lampPose();
+  return {...p,range:lampBeamReach(LAMP_BEAM_RANGE,p.angle,p),halfAngle:LAMP_BEAM_HALF_ANGLE};
+}
+function lampHitsPoint(px,py,range=LAMP_BEAM_RANGE){
   if(!world.lamp.lit||!world.lamp.focused||!world.lampAcquired)return false;
   const p=lampPose(),dx=px-p.x,dy=py-p.y,d=Math.hypot(dx,dy);if(d>range)return false;
   const diff=Math.abs(normalizeAngle(Math.atan2(dy,dx)-p.angle));
-  return d<56||diff<.56;
+  if(!(d<56||diff<LAMP_BEAM_HALF_ANGLE))return false;
+  return !getBlockingWalls().some(w=>segmentIntersectsRect(p.x,p.y,px,py,w));
 }
 function setLampHeld(held){
   player.lampHeld=held;world.lamp.held=held;
@@ -1507,15 +1531,6 @@ function setLampFocused(focused){
   return true;
 }
 function lampIsFocused(){return !!(world.lampAcquired&&player.lampHeld&&world.lamp.focused);}
-function lampBeamReach(maxLen=330){
-  if(!world.lamp.lit||!world.lamp.focused||!world.lampAcquired)return maxLen;
-  const p=lampPose(),walls=getBlockingWalls(),step=12;
-  for(let d=24;d<=maxLen;d+=step){
-    const sx=p.x+Math.cos(p.angle)*d,sy=p.y+Math.sin(p.angle)*d;
-    if(walls.some(w=>sx>=w.x&&sx<=w.x+w.w&&sy>=w.y&&sy<=w.y+w.h))return Math.max(48,d-step);
-  }
-  return maxLen;
-}
 function shadowExposed(e){ return e.type!=="shadow" || (e.fixedTimer>0) || (e.exposed&&lampHitsPoint(e.x+e.w/2,e.y+e.h*.48)); }
 function enemyToolState(e){
   const revealed=e.type!=="shadow"||e.fixedTimer>0||!!e.exposed;
@@ -4036,15 +4051,23 @@ function drawInteractionWorldMarker(){
 
 function drawLampBeam(){
   if(!world.lamp.lit||!lampIsFocused()||world.epilogueActive)return;
-  const p=lampPose(),x=p.x-cameraX,y=p.y;
-  // Gameplay still tests the full 330px beam. Only the visual spill is shortened/narrowed
-  // so late-game clues are not covered by a giant translucent triangle.
-  const len=Math.min(lampBeamReach(330),235),spread=.18;
+  const beam=lampBeamGeometry(),p=beam,x=p.x-cameraX,y=p.y;
+  // Keep the bright core narrow, while the faint outer envelope marks the full
+  // distance and angle that can actually reveal a target.
+  const len=Math.min(beam.range,235),spread=.18;
   ctx.save();ctx.globalCompositeOperation="screen";
   const color=world.lamp.stable<.55?"#b9d5ce":"#ffd47b";
   const spill=ctx.createRadialGradient(x,y,0,x,y,76);
   spill.addColorStop(0,color+"66");spill.addColorStop(.20,color+"32");spill.addColorStop(.58,color+"10");spill.addColorStop(1,"rgba(0,0,0,0)");
   ctx.fillStyle=spill;ctx.globalAlpha=.38;ctx.beginPath();ctx.arc(x,y,76,0,Math.PI*2);ctx.fill();
+  const fullRange=beam.range,outerSpread=beam.halfAngle;
+  ctx.fillStyle=color;ctx.globalAlpha=.014;ctx.beginPath();ctx.moveTo(x,y);
+  ctx.lineTo(x+Math.cos(p.angle-outerSpread)*fullRange,y+Math.sin(p.angle-outerSpread)*fullRange);
+  ctx.quadraticCurveTo(x+Math.cos(p.angle)*fullRange*.96,y+Math.sin(p.angle)*fullRange*.96,x+Math.cos(p.angle+outerSpread)*fullRange,y+Math.sin(p.angle+outerSpread)*fullRange);
+  ctx.closePath();ctx.fill();
+  ctx.globalAlpha=.055;ctx.strokeStyle="#ffe6ab";ctx.lineWidth=.8;ctx.beginPath();
+  for(const side of [-1,1]){const a=p.angle+outerSpread*side,reach=lampBeamReach(LAMP_BEAM_RANGE,a,p);ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(a)*reach,y+Math.sin(a)*reach);}
+  ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(p.angle)*beam.range,y+Math.sin(p.angle)*beam.range);ctx.stroke();
   const outerLen=len,innerLen=len*.78,coreLen=len*.58;
   ctx.fillStyle=color;
   ctx.globalAlpha=.032;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(p.angle-spread)*outerLen,y+Math.sin(p.angle-spread)*outerLen);ctx.quadraticCurveTo(x+Math.cos(p.angle)*outerLen*.94,y+Math.sin(p.angle)*outerLen*.94,x+Math.cos(p.angle+spread)*outerLen,y+Math.sin(p.angle+spread)*outerLen);ctx.closePath();ctx.fill();
