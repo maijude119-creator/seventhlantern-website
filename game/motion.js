@@ -6,10 +6,11 @@
   const M = {};
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const lerp = (a, b, t) => a + (b - a) * clamp(t, 0, 1);
-  // Locomotion phase remains distance-driven. The renderer now samples six authored
-  // poses across the same stride, so movement stays smooth without increasing world speed.
-  // ~0.042 phase-steps per travelled pixel yields about 2.8-3.1 cycles/sec at full run speed.
-  const PLAYER_PHASE_PER_PIXEL = 0.042;
+  // Keep the authored six-pose cycle distance-driven, with separate stride lengths
+  // for walking and running. These rates match the two footstep intervals in game.js:
+  // 1.6 walk cycles/sec at 175 px/sec and 2.27 run cycles/sec at 220 px/sec.
+  const PLAYER_WALK_PHASE_PER_PIXEL = (3 * 1.6) / 175;
+  const PLAYER_RUN_PHASE_PER_PIXEL = (3 * 2.27) / 220;
   const PLAYER_TELEPORT_PHASE_CUTOFF = 80;
   const state = {
     coyote: 0,
@@ -45,12 +46,17 @@
 
   M.interacting = () => false;
 
+  function playerPhasePerPixel(speed){
+    const runBlend=clamp((speed-175)/(220-175),0,1);
+    return lerp(PLAYER_WALK_PHASE_PER_PIXEL,PLAYER_RUN_PHASE_PER_PIXEL,runBlend);
+  }
+
   function samplePlayerTravelPhase(){
     const p=player||{};
     if(state.playerLastX==null){state.playerLastX=p.x||0;return 0;}
     const travelled=Math.abs((p.x||0)-state.playerLastX);
     // Teleports / respawns must resync the pivot without fast-forwarding the feet.
-    if(travelled>0&&travelled<PLAYER_TELEPORT_PHASE_CUTOFF)state.playerPhase+=travelled*PLAYER_PHASE_PER_PIXEL;
+    if(travelled>0&&travelled<PLAYER_TELEPORT_PHASE_CUTOFF)state.playerPhase+=travelled*playerPhasePerPixel(Math.abs(p.vx||0));
     state.playerLastX=p.x||0;
     return travelled;
   }
