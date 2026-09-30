@@ -1,15 +1,15 @@
 ﻿window.SEVENTH_LANTERN_CONFIG = {
   title: "第7盏灯",
   author: "买橘的",
-  version: "v1.0.0",
-  windowsVersion: "v1.0.0",
+  version: "v1.1.0",
+  windowsVersion: "v1.1.0",
   webGameVersion: "v5.3.0",
-  siteBuild: "v2.7.0",
-  releaseDate: "2026.09.29",
+  siteBuild: "v2.7.1",
+  releaseDate: "2026.09.30",
   download: {
-    url: "https://github.com/maijude119-creator/seventhlantern-website/releases/download/v1.0.0/SeventhLantern_v1.0.0_Windows.zip",
-    sizeBytes: 80991665,
-    sha256: "d95eeefe525b4ae2c48a3684f9eca10b9eec8c83f0168f01c5687b440825ab3d"
+    url: "https://github.com/maijude119-creator/seventhlantern-website/releases/download/v1.1.0/SeventhLantern_v1.1.0_Windows.zip",
+    sizeBytes: 81011064,
+    sha256: "056a032c3f7401449a098291dbf2d68bc7c120180f5e6be03e5295cec7da2f80"
   },
   github: {
     owner: "maijude119-creator",

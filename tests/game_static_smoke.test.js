@@ -59,23 +59,23 @@ test('site surfaces announce Web v5.3.0 and the actually published Windows versi
   const readme = read('README.md');
   const offlineReadme = read('READ_ME.txt');
 
-  assert.match(config, /windowsVersion:\s*"v1\.0\.0"/);
+  assert.match(config, /windowsVersion:\s*"v1\.1\.0"/);
   assert.match(config, /webGameVersion:\s*"v5\.3\.0"/);
   assert.match(play, /Web v5\.3/);
-  assert.match(play, /data-win-version>v1\.0\.0/);
+  assert.match(play, /data-win-version>v1\.1\.0/);
   assert.match(download, /data-web-version>v5\.3\.0/);
-  assert.match(download, /data-win-version>v1\.0\.0/);
+  assert.match(download, /data-win-version>v1\.1\.0/);
   assert.match(changelog, /2026\.09\.30/);
   assert.match(changelog, /GAME v5\.3\.0/);
   assert.match(changelog, /Windows v1\.1\.0/);
   assert.match(readme, /Web 游戏版本：v5\.3\.0/);
-  assert.match(readme, /Windows 已发布版本：v1\.0\.0/);
+  assert.match(readme, /Windows 已发布版本：v1\.1\.0/);
   assert.match(offlineReadme, /Windows v1\.1\.0/);
 });
 
-test('pre-release Windows link keeps the verified v1.0.0 fallback until upload', () => {
+test('Windows download links point to the published v1.1.0 archive', () => {
   const config = read('site-config.js');
   const download = read('download.html');
-  assert.match(config, /releases\/download\/v1\.0\.0\/SeventhLantern_v1\.0\.0_Windows\.zip/);
-  assert.match(download, /releases\/download\/v1\.0\.0\/SeventhLantern_v1\.0\.0_Windows\.zip/);
+  assert.match(config, /releases\/download\/v1\.1\.0\/SeventhLantern_v1\.1\.0_Windows\.zip/);
+  assert.match(download, /releases\/download\/v1\.1\.0\/SeventhLantern_v1\.1\.0_Windows\.zip/);
 });

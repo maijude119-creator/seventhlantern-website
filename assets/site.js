@@ -204,12 +204,28 @@
   async function loadRelease(){
     const btn=document.getElementById('releaseDownload');
     const direct=cfg.download||{};
+    const checksum=document.querySelector('.checksum code');
+    if(checksum&&direct.sha256)checksum.textContent=direct.sha256;
     if(btn&&direct.url){
       btn.href=direct.url;btn.textContent='下载 Windows 完整版';btn.classList.remove('disabled');btn.removeAttribute('aria-disabled');btn.setAttribute('download','');
       if(direct.sizeBytes)document.getElementById('releaseSize').textContent=formatBytes(direct.sizeBytes);
     }
     const {owner,repo}=cfg.github||{};if(!btn||!owner||!repo)return;
-    try{const r=await fetch(`https://api.github.com/repos/${owner}/${repo}/releases`);if(!r.ok)throw new Error('release');const releases=await r.json();const latest=releases.find(x=>!x.draft&&!x.prerelease)||releases[0];if(!latest)return;const asset=latest.assets?.find(a=>/\.zip$/i.test(a.name))||latest.assets?.[0];if(asset){btn.href=asset.browser_download_url;btn.textContent='下载 Windows 完整版';btn.classList.remove('disabled');btn.removeAttribute('aria-disabled');document.getElementById('releaseSize').textContent=formatBytes(asset.size)}const total=releases.flatMap(x=>x.assets||[]).reduce((s,a)=>s+(a.download_count||0),0);document.getElementById('downloadCount').textContent=total.toLocaleString();document.querySelectorAll('[data-version],[data-win-version]').forEach(el=>el.textContent=latest.tag_name||winVersion)}catch(e){console.warn('GitHub Release unavailable',e)}}
+    try{
+      const r=await fetch(`https://api.github.com/repos/${owner}/${repo}/releases`);
+      if(!r.ok)throw new Error('release');
+      const releases=await r.json();
+      // Keep version, archive and checksum tied to the same verified release.
+      const release=releases.find(x=>!x.draft&&!x.prerelease&&x.tag_name===winVersion);
+      const asset=release?.assets?.find(a=>a.name===`SeventhLantern_${winVersion}_Windows.zip`&&a.state==='uploaded');
+      if(asset){
+        btn.href=asset.browser_download_url;
+        document.getElementById('releaseSize').textContent=formatBytes(asset.size);
+        if(checksum&&/^sha256:[a-f0-9]{64}$/i.test(asset.digest||''))checksum.textContent=asset.digest.slice(7);
+      }
+      const total=releases.filter(x=>!x.draft&&!x.prerelease).flatMap(x=>x.assets||[]).filter(a=>/\.zip$/i.test(a.name)).reduce((s,a)=>s+(a.download_count||0),0);
+      document.getElementById('downloadCount').textContent=total.toLocaleString();
+    }catch(e){console.warn('GitHub Release unavailable',e)}}
   function formatBytes(n){if(!n)return'--';const u=['B','KB','MB','GB'];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return`${n.toFixed(i>1?1:0)} ${u[i]}`}
   loadRelease();
 
