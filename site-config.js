@@ -3,7 +3,7 @@ window.SEVENTH_LANTERN_CONFIG = {
   author: "买橘的",
   version: "v1.1.0",
   windowsVersion: "v1.1.0",
-  webGameVersion: "v5.3.1",
+  webGameVersion: "v5.3.2",
   siteBuild: "v2.7.1",
   releaseDate: "2026.09.30",
   download: {
