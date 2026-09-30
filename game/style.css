@@ -68,6 +68,9 @@ button.ghost{background:#08111488;box-shadow:none}
 .archive-seal{position:absolute;right:12px;top:12px;color:#a34d3e;border:1px solid #7c3b31;padding:3px 5px;font-size:9px;transform:rotate(4deg)}
 #echoBtn:not(.hidden){border-color:#a87b42;background:linear-gradient(180deg,#66502d,#2b2115);color:#f0d7a2}
 body.low-flash #app::before{opacity:.06}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important;scroll-behavior:auto!important}
+}
 @media(max-width:700px){
   .settings-grid{grid-template-columns:1fr;width:94vw}.settings-grid label{grid-template-columns:104px 1fr 34px}
   .archive-panel{padding:56px 14px 20px}.archive-grid{grid-template-columns:1fr}.archive-card{min-height:84px}

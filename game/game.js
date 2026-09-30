@@ -36,6 +36,46 @@ const META_KEY="seventhLanternMetaV5";
 const DEFAULT_GAME_SETTINGS={master:.88,sfx:.86,ambience:.58,screenShake:true,flash:true,routeHints:true,ambientAccents:true};
 function readJsonStorage(key,fallback){try{const v=JSON.parse(localStorage.getItem(key));return v&&typeof v==="object"?v:fallback}catch(_e){return fallback}}
 let gameSettings={...DEFAULT_GAME_SETTINGS,...readJsonStorage(SETTINGS_KEY,{})};
+window.__GAME_ERRORS__||=[];
+const reducedMotionQuery=typeof window.matchMedia==="function"?window.matchMedia("(prefers-reduced-motion: reduce)"):null;
+let combatFx=null;
+try{combatFx=window.CombatFX?.createSystem?.({
+  reducedMotion:!!reducedMotionQuery?.matches,
+  screenShake:gameSettings.screenShake,
+  flash:gameSettings.flash,
+  maxWorld:72,
+  maxScreen:16,
+  maxHazards:12
+})||null;}catch(error){window.__GAME_ERRORS__.push(`CombatFX:init:${String(error?.message||error)}`);}
+function resetCombatFx(){
+  try{combatFx?.reset();}catch(error){window.__GAME_ERRORS__.push(`CombatFX:reset:${String(error?.message||error)}`);}
+}
+function syncCombatFxPreferences(){
+  try{
+    return combatFx?.setPreferences({
+      reducedMotion:!!reducedMotionQuery?.matches,
+      screenShake:gameSettings.screenShake,
+      flash:gameSettings.flash
+    })||null;
+  }catch(error){window.__GAME_ERRORS__.push(`CombatFX:setPreferences:${String(error?.message||error)}`);return null;}
+}
+reducedMotionQuery?.addEventListener?.("change",syncCombatFxPreferences);
+function emitCombatFx(type,payload={}){
+  try{return combatFx?.emit(type,payload)||null;}
+  catch(error){window.__GAME_ERRORS__.push(`CombatFX:${type}:${String(error?.message||error)}`);return null;}
+}
+function updateCombatFx(dt){
+  try{combatFx?.update(dt);}
+  catch(error){window.__GAME_ERRORS__.push(`CombatFX:update:${String(error?.message||error)}`);}
+}
+function drawCombatFxWorld(){
+  try{combatFx?.drawWorld(ctx,cameraX);}
+  catch(error){window.__GAME_ERRORS__.push(`CombatFX:drawWorld:${String(error?.message||error)}`);}
+}
+function drawCombatFxScreen(){
+  try{combatFx?.drawScreen(ctx,W,H);}
+  catch(error){window.__GAME_ERRORS__.push(`CombatFX:drawScreen:${String(error?.message||error)}`);}
+}
 let metaProgress={completed:false,completions:0,endings:[],bestDifficulty:"",memoryFinds:[],echoFinds:[],visitedRegions:[],echoClears:0,totalDeaths:0,bestClearMs:null,lastClear:null,...readJsonStorage(META_KEY,{})};
 let runStats={playMs:0,deaths:0,hitsTaken:0};
 if(!Array.isArray(metaProgress.endings))metaProgress.endings=[];
@@ -60,6 +100,7 @@ function persistSettings(){
   try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(gameSettings));}catch(_e){}
   window.AudioManager?.setVolumes?.({master:gameSettings.master,sfx:gameSettings.sfx,ambience:gameSettings.ambience});
   document.body.classList.toggle("low-flash",!gameSettings.flash);
+  syncCombatFxPreferences();
 }
 function formatRunTime(ms){
   if(!Number.isFinite(ms)||ms<=0)return "—";
@@ -1153,6 +1194,7 @@ function validateWorldIntegrity(){
 }
 
 function buildWorld(){
+  resetCombatFx();
   world.platforms=[]; world.enemies=[]; world.projectiles=[]; world.drops=[]; world.particles=[];world.paperDeathFx=[];world.spriteFx=[];world.floaters=[];world.fields=[];
   world.lore=[]; world.checkpoints=[]; world.switches=[]; world.embers=[];
   world.lamp={x:318,y:520,held:false,focused:false,lit:true,angle:0,facing:1,stable:1};world.lampAcquired=false;
@@ -1569,6 +1611,7 @@ function drawPaperDeathFx(){
   ctx.restore();
 }
 function respawn(){
+  resetCombatFx();
   const hadLamp=!!world.lampAcquired,wasFocused=!!world.lamp.focused;
   const bossAttemptReset=resetBossEncounterAfterDeath();
   player.dead=false;player.deathPhase='idle';player.deathVisualTimer=0;world.paperDeathFx=[]; player.health=player.maxHealth; player.x=player.checkpointX; player.y=player.checkpointY; player.vx=player.vy=0;
@@ -1714,6 +1757,7 @@ function processAttack(){
     else if(a.type==="ruler")window.AudioManager?.play('ruler_hit');
     shake=Math.max(shake,a.charged?8:(a.shake||4)*.8);hitStop=Math.max(hitStop,a.charged?.07:(a.hitStop||.04));impactFlash=Math.max(impactFlash,a.charged?.10:(a.impact||.05));
     const hitX=e.x+e.w/2,hitY=e.y+e.h*.52;
+    emitCombatFx(a.charged?"player-hit-heavy":"player-hit-light",{x:hitX,y:hitY,direction:player.facing,color:feedbackColor,attackType:a.kind,step:a.step||1});
     kickCamera(player.facing*(a.charged?7:3),a.charged?-2.4:-1);registerImpact(hitX,hitY,feedbackColor,a.charged?1.5:1);
     createDirectionalBurst(hitX,hitY,feedbackColor,a.charged?10:6,player.facing,a.charged?1.2:.85);
     world.floaters.push({x:e.x+e.w/2,y:e.y-6,text:`${Math.round(damage)}`,life:.72,max:.72,vy:-34,color:feedbackColor});
@@ -1737,6 +1781,7 @@ function processAttack(){
     bossNarrativeBeat(world.boss,"first_hit","“阿砚。”");
     hitStop=Math.max(hitStop,a.charged ? .075 : .045);shake=Math.max(shake,a.charged?9:6);impactFlash=Math.max(impactFlash,a.charged ? .10 : .065);
     const hx=bossHurtbox.x+bossHurtbox.w*.5,hy=bossHurtbox.y+bossHurtbox.h*.55;
+    emitCombatFx(a.charged?"player-hit-heavy":"player-hit-light",{x:hx,y:hy,direction:player.facing,color:a.charged?"#f0b85b":"#d06a4b",attackType:a.kind,step:a.step||1,boss:true});
     kickCamera(player.facing*(a.charged?9:5),a.charged?-3:-1.5);registerImpact(hx,hy,a.charged?"#f0b85b":"#d06a4b",a.charged?1.8:1.2);
     createDirectionalBurst(hx,hy,a.charged?"#f0b85b":"#d06a4b",a.charged?12:7,player.facing,a.charged?1.3:1);
     world.floaters.push({x:hx,y:bossHurtbox.y+18,text:`${Math.round(a.damage)}`,life:.72,max:.72,vy:-34,color:"#ffd08a"});
@@ -1765,6 +1810,7 @@ function killEnemy(e){
   e.alive=false;e.dying=true;e.aiState="DEAD";e.vx=0;e.vy=0;e.attackDidHit=true;
   e.deathTotal=e.type==="shadow"?.72:e.type==="elite"?.78:.68;
   e.deathTimer=e.deathTotal;
+  emitCombatFx("enemy-defeated",{x:e.x+e.w*.5,y:e.y+e.h*.52,direction:-player.facing,color:e.type==="paper"?"#e9cda9":e.type==="elite"?"#c77a55":"#8aa6a9",enemyType:e.type});
   createBurst(e.x+e.w/2,e.y+e.h/2,"#202c31",8);
   // When the last nearby threat falls, give the room a short exhale instead of
   // snapping directly back to traversal. This is a world beat, not a new UI state.
@@ -1799,7 +1845,7 @@ function createDirectionalBurst(x,y,color,count=6,dir=1,power=1){
   }
 }
 function kickCamera(x=0,y=0){
-  if(!gameSettings.screenShake)return;
+  if(!gameSettings.screenShake||reducedMotionQuery?.matches)return;
   cameraKickX=clamp(cameraKickX+x,-18,18);cameraKickY=clamp(cameraKickY+y,-14,14);
 }
 function registerImpact(x,y,color="#ffe2ad",power=1){
@@ -2931,7 +2977,7 @@ function beginBoss(){
     x:6470,y:350,w:330,h:225,hp:maxHp,maxHp,uiHp:maxHp,
     timer:1.2,windup:0,attackFlash:0,dash:0,dashTotal:.48,hurt:0,
     phase:1,lastPhase:1,pendingPhase:null,transitionFrom:1,transitionTo:1,
-    phaseTransition:0,phaseTransitionTotal:.58,lastAttackId:null,queuedAttackId:null,telegraphKind:null,telegraphLabel:"",telegraphDir:-1,telegraphTotal:0,attackRepeat:0,voiceTrial:false,voiceTrialDone:false,voiceProbe:[0,0,0],voiceRevealed:[false,false,false],voiceCorrect:1,voiceHitHint:false,voiceControlHintShown:false,storyBeats:new Set()
+    phaseTransition:0,phaseTransitionTotal:.70,lastAttackId:null,queuedAttackId:null,telegraphKind:null,telegraphLabel:"",telegraphDir:-1,telegraphTotal:0,attackRepeat:0,voiceTrial:false,voiceTrialDone:false,voiceProbe:[0,0,0],voiceRevealed:[false,false,false],voiceCorrect:1,voiceHitHint:false,voiceControlHintShown:false,storyBeats:new Set()
   };
   sound.boss(); shake=18; queueDialogue("百口灯妖",["阿——砚——", "这些声音里，有一个属于你。"]); showToast("首领：百口灯妖",3);
 }
@@ -2961,30 +3007,25 @@ function queueBossAttack(b){
   const id=chooseBossAttack(b),meta=bossAttackMeta(id);
   b.queuedAttackId=id;b.telegraphKind=meta.kind;b.telegraphLabel=meta.label||"";b.telegraphTotal=meta.windup;
   b.telegraphDir=Math.sign(player.x-(b.x+b.w*.5))||-1;b.windup=meta.windup;
+  refreshBossTelegraph(b);
   return id;
 }
 
-function bossAttack(b){
-  const attackId=b.queuedAttackId||chooseBossAttack(b);
-  const attackKind=b.telegraphKind||bossAttackMeta(attackId).kind||"volley";
-  b.lastAttackId=attackId;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphLabel="";
-  b.attackFlash=.32;shake=Math.max(shake,5.5);sound.bossAttack(attackKind);
-  if(attackKind==="ground")kickCamera(0,5);
-  else if(attackKind==="dash")kickCamera((b.telegraphDir||-1)*6,-2);
-  else kickCamera((b.telegraphDir||-1)*2.5,-1);
+function bossAttackPlan(b,attackId){
+  const projectiles=[];let dash=null;
   const origin={x:b.x+b.w*.5,y:b.y+(b.phase===1?96:b.phase===2?118:76)};
   const aim=Math.atan2((getPlayerHurtbox().y+getPlayerHurtbox().h*.5)-origin.y,(getPlayerHurtbox().x+getPlayerHurtbox().w*.5)-origin.x);
   const speedMul=difficultyValues[difficulty].bossProjectileSpeed||1;
   const volleyMul=difficultyValues[difficulty].bossVolley||1;
-  const shot=(a,speed=285,r=10,damage=13,life=4,color="#c5763a")=>pushProjectile({x:origin.x,y:origin.y,vx:Math.cos(a)*speed*speedMul,vy:Math.sin(a)*speed*speedMul,r,damage,owner:"enemy",life,color});
-  const groundWave=(dir=-1,speed=390)=>{const gp=getPrimaryGroundAt(b.x+b.w*.5);pushProjectile({x:b.x+b.w*.5,y:(gp?gp.y:610)-20,vx:dir*speed*speedMul,vy:0,r:17,damage:15,owner:"enemy",life:1.45,color:"#37202a",groundWave:true});};
+  const shot=(a,speed=285,r=10,damage=13,life=4,color="#c5763a")=>projectiles.push({x:origin.x,y:origin.y,vx:Math.cos(a)*speed*speedMul,vy:Math.sin(a)*speed*speedMul,r,damage,owner:"enemy",life,color});
+  const groundWave=(dir=-1,speed=390)=>{const gp=getPrimaryGroundAt(b.x+b.w*.5);projectiles.push({x:b.x+b.w*.5,y:(gp?gp.y:610)-20,vx:dir*speed*speedMul,vy:0,r:17,damage:15,owner:"enemy",life:1.45,color:"#37202a",groundWave:true});};
   const oddCount=base=>{let n=Math.max(3,Math.round(base*volleyMul));if(n%2===0)n+=1;return n;};
   const fan=(count,center,spread,speed,r,damage,life,color)=>{const half=(count-1)/2;for(let i=0;i<count;i++)shot(center+(i-half)*spread,speed,r,damage,life,color);};
 
   if(attackId==="echoRing"){
     for(let i=0;i<12;i++)shot(i*Math.PI*2/12,248,9,14,3.4,"#a94d78");
   }else if(attackId==="echoChase"){
-    b.dash=.54;b.dashTotal=.54;b.dashDir=b.telegraphDir||Math.sign(player.x-(b.x+b.w*.5))||-1;
+    dash={duration:.54,direction:b.telegraphDir||Math.sign(player.x-(b.x+b.w*.5))||-1};
     for(let i=-2;i<=2;i++)shot(aim+i*.16,330,9,15,3.0,"#b85a7c");
   }else if(attackId==="echoCross"){
     groundWave(-1,390);groundWave(1,390);fan(5,aim,.18,300,10,15,3.1,"#9c466d");
@@ -3003,10 +3044,35 @@ function bossAttack(b){
   }else if(attackId==="rageFan"){
     fan(oddCount(5),aim,.22,310,10,15,3.2,"#9d3532");
   }else{
-    b.dash=.48;b.dashTotal=.48;b.dashDir=b.telegraphDir||Math.sign(player.x-(b.x+b.w*.5))||-1;
+    dash={duration:.48,direction:b.telegraphDir||Math.sign(player.x-(b.x+b.w*.5))||-1};
     if(attackId==="dashVolley"){for(let i=-2;i<=2;i++)shot(aim+i*.22,315,10,15,3.3,"#9d3532");}
-    else groundWave(-b.dashDir,365);
+    else groundWave(-dash.direction,365);
   }
+  return {projectiles,dash};
+}
+function bossDashSpeed(progress){return 620*Math.pow(1-progress,1.35)+90*Math.sin(progress*Math.PI);}
+function refreshBossTelegraph(b){
+  const plan=bossAttackPlan(b,b.queuedAttackId);
+  const segments=plan.projectiles.map(p=>({x:p.x,y:p.y,x2:p.x+p.vx*p.life,y2:p.y+p.vy*p.life,r:p.r}));
+  let dashArea=null;
+  if(plan.dash){
+    let remaining=plan.dash.duration,endX=b.x;
+    while(remaining>0){remaining=Math.max(0,remaining-1/60);endX=clamp(endX+plan.dash.direction*bossDashSpeed(1-remaining/plan.dash.duration)/60,6070,6950);}
+    dashArea={x:Math.min(b.x,endX),y:b.y,w:b.w+Math.abs(endX-b.x),h:b.h};
+  }
+  emitCombatFx("boss-telegraph",{x:b.x+b.w*.5,y:b.groundY||610,direction:b.telegraphDir,kind:b.telegraphKind,duration:b.windup,total:b.telegraphTotal,phase:b.phase,attackId:b.queuedAttackId,segments,dashArea});
+}
+function bossAttack(b){
+  const attackId=b.queuedAttackId||chooseBossAttack(b);
+  const attackKind=b.telegraphKind||bossAttackMeta(attackId).kind||"volley";
+  b.lastAttackId=attackId;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphLabel="";
+  b.attackFlash=.32;shake=Math.max(shake,5.5);sound.bossAttack(attackKind);
+  if(attackKind==="ground")kickCamera(0,5);
+  else if(attackKind==="dash")kickCamera((b.telegraphDir||-1)*6,-2);
+  else kickCamera((b.telegraphDir||-1)*2.5,-1);
+  const plan=bossAttackPlan(b,attackId);
+  for(const projectile of plan.projectiles)pushProjectile(projectile);
+  if(plan.dash){b.dash=b.dashTotal=plan.dash.duration;b.dashDir=plan.dash.direction;}
 }
 
 function updateBoss(dt){
@@ -3026,7 +3092,9 @@ function updateBoss(dt){
   // the same frame that Phase 01 art disappeared.
   if(!b.pendingPhase&&desiredPhase!==b.phase){
     b.pendingPhase=desiredPhase;b.transitionFrom=b.phase;b.transitionTo=desiredPhase;
-    b.phaseTransition=b.phaseTransitionTotal||.58;b.windup=0;b.dash=0;b.timer=.55;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphLabel="";b.telegraphTotal=0;
+    b.phaseTransition=b.phaseTransitionTotal||.70;b.windup=0;b.dash=0;b.timer=.55;b.queuedAttackId=null;b.telegraphKind=null;b.telegraphLabel="";b.telegraphTotal=0;
+    world.projectiles.length=0;world.fields.length=0;
+    emitCombatFx("boss-phase-transition",{x:b.x+b.w*.5,y:b.y+b.h*.48,phase:desiredPhase,duration:b.phaseTransition});
     showToast(desiredPhase===2?"戏台展开，满城低语从灯幕后涌出":desiredPhase===4?"你上一次打败它的声音，被它自己学会了":"灯幕伏地，黑灯开始追猎",2.4);
     sound.bossPhase();
     if(desiredPhase===2){window.AudioManager?.play('gong_low',{volume:.22});window.AudioManager?.play('temple_bell_far',{volume:.18});}
@@ -3083,12 +3151,12 @@ function updateBoss(dt){
     b.dash=Math.max(0,b.dash-dt);
     const progress=clamp(1-b.dash/(b.dashTotal||.48),0,1);
     // Smooth ease-out velocity: strong start, controlled finish, no hard stop.
-    const dashSpeed=620*Math.pow(1-progress,1.35)+90*Math.sin(progress*Math.PI);
+    const dashSpeed=bossDashSpeed(progress);
     b.x+=b.dashDir*dashSpeed*dt;
     if(progress>.18&&progress<.82&&Math.floor(progress*12)%2===0)createBurst(b.x+b.w/2,(b.groundY||610)-12,"#30202a",1);
     b.x=clamp(b.x,6070,6950);return;
   }
-  if(b.windup>0){b.windup=Math.max(0,b.windup-dt);if(b.windup<=0)bossAttack(b);return;}
+  if(b.windup>0){b.windup=Math.max(0,b.windup-dt);if(b.windup<=0)bossAttack(b);else refreshBossTelegraph(b);return;}
   b.timer-=dt;
   if(b.timer<=0){
     queueBossAttack(b);
@@ -3101,14 +3169,16 @@ function defeatBoss(){
   if(!b||b.dying||world.bossDefeated)return;
   b.hp=0;b.dying=true;b.deathTotal=.92;b.deathTimer=b.deathTotal;
   b.windup=0;b.dash=0;b.queuedAttackId=null;b.telegraphKind=null;
-  world.projectiles=[];world.fields=[];shake=22;sound.bossDeath();
+  world.projectiles.length=0;world.fields.length=0;shake=22;sound.bossDeath();
+  emitCombatFx("boss-defeated",{x:b.x+b.w*.5,y:b.y+b.h*.48,phase:b.phase,duration:b.deathTotal});
   createBurst(b.x+b.w*.5,b.y+b.h*.48,"#e7bb58",22);
 }
 function finalizeBossDefeat(){
   const b=world.boss;
   if(!b||world.bossDefeated)return;
   b.dying=false;
-  world.bossDefeated=true;world.bossActive=false;world.projectiles=[];world.fields=[];sound.lantern();
+  world.bossDefeated=true;world.bossActive=false;world.projectiles.length=0;world.fields.length=0;sound.lantern();
+  emitCombatFx("boss-defeated",{x:b.x+b.w*.5,y:b.y+b.h*.72,phase:b.phase,duration:.38,finalize:true});
   createBurst(b.x+b.w*.5,b.y+b.h*.72,"#e7bb58",42);world.lanternsRecovered=Math.max(world.lanternsRecovered,1);
   queueDialogue("无名客",["第一盏灯归位了，但雨没有停。","戏楼的幕布后，还有人在借别人的脸说话。"]);
   showGuidance("前往无面戏楼","百口灯妖只是第一道门。继续向右，六盏灯的余烬正把路照亮。","向右前进",5);
@@ -3135,8 +3205,10 @@ function update(dt){
   cameraKickX=lerp(cameraKickX,0,1-Math.exp(-18*dt));cameraKickY=lerp(cameraKickY,0,1-Math.exp(-20*dt));
   lanternWarningTimer=Math.max(0,lanternWarningTimer-dt);world.combatReleaseTimer=Math.max(0,(world.combatReleaseTimer||0)-dt);player.paperHurtFlash=Math.max(0,(player.paperHurtFlash||0)-dt);if(world.clueReaction?.timer>0){world.clueReaction.timer=Math.max(0,world.clueReaction.timer-dt);world.clueReaction.active=world.clueReaction.timer>0;}if(guidance.timer>0)guidance.timer-=dt; if(toastTimer>0){toastTimer-=dt;if(toastTimer<=0)toastEl.classList.remove("visible");}
   sound.update(world.epilogueActive?"epilogue":world.currentRegion,dt);
+  if(reducedMotionQuery?.matches)hitStop=0;
   if(hitStop>0){hitStop=Math.max(0,hitStop-dt);pressed.clear();released.clear();return;}
   if(state!=="playing"||currentDialogue){pressed.clear();released.clear();return;}
+  updateCombatFx(dt);
   runStats.playMs=(runStats.playMs||0)+dt*1000;
   if(world.endingChoiceActive){
     if(pressed.has("escape")){world.endingChoiceActive=false;showToast("第七盏灯仍在等你",1.8);}
@@ -4508,7 +4580,7 @@ function drawLightingV3(){
 function drawCombatOverlayV5(){
   ctx.save();if(player.health<35&&!player.dead){const a=(1-player.health/35)*.27*(.78+Math.sin(gameTime*3.2)*.22),g=ctx.createRadialGradient(W/2,H/2,220,W/2,H/2,720);g.addColorStop(0,"transparent");g.addColorStop(1,`rgba(112,34,26,${a})`);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.globalAlpha=a*.75;ctx.strokeStyle="#6f452f";ctx.lineWidth=2;ctx.setLineDash([9,7]);ctx.strokeRect(8,8,W-16,H-16);ctx.setLineDash([]);}
   if(world.bossActive&&world.boss?.phase===3){ctx.globalAlpha=.08+.03*Math.sin(gameTime*5);ctx.fillStyle="#9b1e2e";ctx.fillRect(0,0,W,H);}
-  if(gameSettings.flash&&impactFlash>0){ctx.globalAlpha=impactFlash*2.8;ctx.fillStyle="#fff1cf";ctx.fillRect(0,0,W,H);}ctx.restore();
+  if(gameSettings.flash&&!reducedMotionQuery?.matches&&impactFlash>0){ctx.globalAlpha=impactFlash*2.8;ctx.fillStyle="#fff1cf";ctx.fillRect(0,0,W,H);}ctx.restore();
 }
 function drawEpilogueVisuals(){
   if(!world.epilogueActive)return;
@@ -4663,7 +4735,7 @@ function drawAssetQAOverlay(){
 
 function render(){
   const simulationState=applyRenderInterpolation();
-  ctx.save();const jitter=gameSettings.screenShake?shake*.46:0;ctx.translate((jitter>0?rand(-jitter,jitter):0)+(gameSettings.screenShake?cameraKickX:0),(jitter>0?rand(-jitter,jitter):0)+(gameSettings.screenShake?cameraKickY:0));
+  ctx.save();const allowShake=gameSettings.screenShake&&!reducedMotionQuery?.matches;const jitter=allowShake?shake*.46:0;ctx.translate((jitter>0?rand(-jitter,jitter):0)+(allowShake?cameraKickX:0),(jitter>0?rand(-jitter,jitter):0)+(allowShake?cameraKickY:0));
   ctx.save();ctx.filter="saturate(0.80) brightness(0.90)";
   const activeRegion=sceneRegionAt(cameraX+W*.5);
   const useProductionScene=productionRegionId(activeRegion.id)&&window.ProductionAssets?.drawScene;
@@ -4689,9 +4761,9 @@ function render(){
   ctx.save();const bgVig=ctx.createRadialGradient(W/2,H/2,250,W/2,H/2,760);bgVig.addColorStop(0,"rgba(0,0,0,0)");bgVig.addColorStop(1,"rgba(2,4,6,.15)");ctx.fillStyle=bgVig;ctx.fillRect(0,0,W,H);ctx.restore();
   drawChapterGameplay();drawFullGameProgressionProps();drawEntityShadowsV2();
   if(!world.epilogueActive)for(const e of world.enemies)drawEnemyV2(e);drawBossV2();drawProjectilesV2();drawCombatReleaseBeat();
-  drawPlayerV2();drawPaperDeathFx();drawParticlesV2();drawOfficialSpriteFx();drawFloatersV5();drawRegionAmbienceV4();drawLightingV3();drawLampBeam();drawForegroundV2();drawForegroundOcclusion();drawInteractionWorldMarker();drawEpilogueVisuals();if(window.Motion)window.Motion.drawWorldOverlay();ctx.restore();
+  drawPlayerV2();drawPaperDeathFx();drawParticlesV2();drawOfficialSpriteFx();drawCombatFxWorld();drawFloatersV5();drawRegionAmbienceV4();drawLightingV3();drawLampBeam();drawForegroundV2();drawForegroundOcclusion();drawInteractionWorldMarker();drawEpilogueVisuals();if(window.Motion)window.Motion.drawWorldOverlay();ctx.restore();
   const vig=ctx.createRadialGradient(W/2,H/2,160,W/2,H/2,700);vig.addColorStop(0,"transparent");vig.addColorStop(1,world.bossActive&&world.boss&&(world.boss.pendingPhase||world.boss.phase)>=2?"#02030438":"#02030422");ctx.fillStyle=vig;ctx.fillRect(0,0,W,H);
-  ctx.globalAlpha=.035;ctx.fillStyle="#e8ddc8";for(let i=0;i<220;i++){const x=(i*83)%W,y=(i*149)%H;ctx.fillRect(x,y,1+(i%3),1);}ctx.globalAlpha=1;drawImpactSpotV4();drawCombatOverlayV5();drawClueReactionOverlay();drawObjectiveWhisperV4();
+  ctx.globalAlpha=.035;ctx.fillStyle="#e8ddc8";for(let i=0;i<220;i++){const x=(i*83)%W,y=(i*149)%H;ctx.fillRect(x,y,1+(i%3),1);}ctx.globalAlpha=1;drawImpactSpotV4();drawCombatOverlayV5();drawCombatFxScreen();drawClueReactionOverlay();drawObjectiveWhisperV4();
   drawUIV2();drawAssetQAOverlay();
   restoreSimulationState(simulationState);
 }
@@ -4769,7 +4841,6 @@ resizeGameViewport();
 buildWorld();resetPlayer();requestAnimationFrame(loop);
 
 // Expose a minimal diagnostic surface for automated smoke tests.
-window.__GAME__={animationRevision:'v5.2.0',getState:()=>({state,difficulty,dialogue:currentDialogue?.text||null,guidance:{title:guidance.title,timer:guidance.timer},camera:{x:cameraX},render:{alpha:renderAlpha,interpolated:getInterpolatedRenderState()},player:{x:player.x,y:player.y,groundY:player.groundY,health:player.health,paperBody:paperBodyState(),paperHurtFlash:player.paperHurtFlash||0,weapon:player.weapon?.type||null,lampHeld:player.lampHeld,grounded:player.grounded,dodging:player.dodging,guarding:player.guarding,attacking:!!player.attack,attackCharged:!!player.attack?.charged,attackKind:player.attack?.kind||null,attackStep:player.attack?.step||0,lampOrigin:lampPose(),checkpointX:player.checkpointX,checkpointY:player.checkpointY,dead:player.dead,deathPhase:player.deathPhase,deathVisualTimer:player.deathVisualTimer,interact:player.interactTarget?.kind||null,interactId:player.interactTarget?.obj?.id||null,interactCandidates:(player.interactCandidates||[]).map(t=>interactionTargetId(t)),interactIndex:player.interactIndex||0,hurtbox:getPlayerHurtbox(),hurtTimer:player.hurtTimer||0},world:{embers:world.emberCount,doorOpen:world.doorOpen,gateOpen:world.gateOpen,wallHp:world.wallHp,puzzleStep:world.puzzleStep,bossActive:world.bossActive,bossDefeated:world.bossDefeated,currentRegion:world.currentRegion,lanternsRecovered:world.lanternsRecovered,finalReady:world.finalReady,finalChoice:world.finalChoice,endingChoiceActive:world.endingChoiceActive,endingChoiceIndex:world.endingChoiceIndex,epilogueActive:world.epilogueActive,epilogueBeat:world.epilogueBeat,epilogueComplete:world.epilogueComplete,chapterProgress:JSON.parse(JSON.stringify(world.chapterProgress)),tutorialFlags:{...world.tutorialFlags},storyApparitions:Object.keys(world.storyRuntime?.active||{}),ritualBladeUnlocked:world.ritualBladeUnlocked,bossHp:world.boss?Math.max(0,Math.round(world.boss.hp)):null,bossPhase:world.boss?.phase||null,bossPendingPhase:world.boss?.pendingPhase||null,bossTransition:world.boss?.phaseTransition||0,bossLastAttack:world.boss?.lastAttackId||null,particles:world.particles.length,projectiles:world.projectiles.length,lanternStable:world.lamp.stable,firstEncounterStarted:world.firstEncounterStarted,firstShadowDefeated:world.firstShadowDefeated,enemiesAlive:world.enemies.filter(e=>e.alive).length,drops:world.drops.map(d=>({type:d.type,x:Math.round(d.x),y:Math.round(d.y)})),nearEnemies:world.enemies.filter(e=>e.alive&&!e.inactive&&Math.abs(e.x-player.x)<180).map(e=>({type:e.type,hp:Math.round(e.hp),x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,aiState:e.aiState,exposed:e.exposed})),enemies:world.enemies.filter(e=>e.alive).map(e=>({id:e.id,type:e.type,x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,grounded:e.grounded,aiState:e.aiState,stuckTimer:e.stuckTimer||0}))},errors:window.__GAME_ERRORS__||[]}),start:startGame,teleport:(x,y=480)=>{player.x=x;player.y=y;player.vx=player.vy=0;const g=getPrimaryGroundAt(player.x+player.w*.5);if(g){player.y=g.y-player.h;player.grounded=true;}},damage:damagePlayer};
-window.__GAME_ERRORS__=[];
+window.__GAME__={animationRevision:'v5.3.0',getState:()=>({state,difficulty,dialogue:currentDialogue?.text||null,guidance:{title:guidance.title,timer:guidance.timer},camera:{x:cameraX},render:{alpha:renderAlpha,interpolated:getInterpolatedRenderState()},combatFx:combatFx?.getDiagnostics?.()||null,player:{x:player.x,y:player.y,groundY:player.groundY,health:player.health,paperBody:paperBodyState(),paperHurtFlash:player.paperHurtFlash||0,weapon:player.weapon?.type||null,lampHeld:player.lampHeld,grounded:player.grounded,dodging:player.dodging,guarding:player.guarding,attacking:!!player.attack,attackCharged:!!player.attack?.charged,attackKind:player.attack?.kind||null,attackStep:player.attack?.step||0,lampOrigin:lampPose(),checkpointX:player.checkpointX,checkpointY:player.checkpointY,dead:player.dead,deathPhase:player.deathPhase,deathVisualTimer:player.deathVisualTimer,interact:player.interactTarget?.kind||null,interactId:player.interactTarget?.obj?.id||null,interactCandidates:(player.interactCandidates||[]).map(t=>interactionTargetId(t)),interactIndex:player.interactIndex||0,hurtbox:getPlayerHurtbox(),hurtTimer:player.hurtTimer||0},world:{embers:world.emberCount,doorOpen:world.doorOpen,gateOpen:world.gateOpen,wallHp:world.wallHp,puzzleStep:world.puzzleStep,bossActive:world.bossActive,bossDefeated:world.bossDefeated,currentRegion:world.currentRegion,lanternsRecovered:world.lanternsRecovered,finalReady:world.finalReady,finalChoice:world.finalChoice,endingChoiceActive:world.endingChoiceActive,endingChoiceIndex:world.endingChoiceIndex,epilogueActive:world.epilogueActive,epilogueBeat:world.epilogueBeat,epilogueComplete:world.epilogueComplete,chapterProgress:JSON.parse(JSON.stringify(world.chapterProgress)),tutorialFlags:{...world.tutorialFlags},storyApparitions:Object.keys(world.storyRuntime?.active||{}),ritualBladeUnlocked:world.ritualBladeUnlocked,bossHp:world.boss?Math.max(0,Math.round(world.boss.hp)):null,bossPhase:world.boss?.phase||null,bossPendingPhase:world.boss?.pendingPhase||null,bossTransition:world.boss?.phaseTransition||0,bossLastAttack:world.boss?.lastAttackId||null,particles:world.particles.length,projectiles:world.projectiles.length,lanternStable:world.lamp.stable,firstEncounterStarted:world.firstEncounterStarted,firstShadowDefeated:world.firstShadowDefeated,enemiesAlive:world.enemies.filter(e=>e.alive).length,drops:world.drops.map(d=>({type:d.type,x:Math.round(d.x),y:Math.round(d.y)})),nearEnemies:world.enemies.filter(e=>e.alive&&!e.inactive&&Math.abs(e.x-player.x)<180).map(e=>({type:e.type,hp:Math.round(e.hp),x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,aiState:e.aiState,exposed:e.exposed})),enemies:world.enemies.filter(e=>e.alive).map(e=>({id:e.id,type:e.type,x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,grounded:e.grounded,aiState:e.aiState,stuckTimer:e.stuckTimer||0}))},errors:window.__GAME_ERRORS__||[]}),start:startGame,teleport:(x,y=480)=>{player.x=x;player.y=y;player.vx=player.vy=0;const g=getPrimaryGroundAt(player.x+player.w*.5);if(g){player.y=g.y-player.h;player.grounded=true;}},damage:damagePlayer};
 window.__ASSET_STATUS__=()=>({loaded:artLoaded,total:Object.keys(artFiles).length,missing:missingRequiredAssets(),ready:requiredAssetsReady(),official:Object.values(artFiles).filter(src=>src.includes("assets/SeventhLantern/")).length});
 window.addEventListener("error",e=>window.__GAME_ERRORS__.push(String(e.error||e.message)));

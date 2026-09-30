@@ -1,3 +1,7 @@
-1) Copy BOTH .bat/.cmd files into the website root folder (same folder as index.html and vercel.json).
-2) Double-click 00_START_HERE_NO_CLOSE.bat.
-3) The black window will stay open even if an error occurs.
+《第7盏灯》Windows v1.1.0
+
+1. 请先完整解压 ZIP，不要直接在压缩包里运行。
+2. 双击 00_START_GAME.bat 启动；也可以用 Chrome 或 Edge 打开 index.html。
+3. 存档保存在当前浏览器的本地存储中，请勿随意清除浏览器数据。
+
+本版对应 Web v5.3.0，加入统一战斗特效、Boss 危险区预警、阶段转换和击杀演出。

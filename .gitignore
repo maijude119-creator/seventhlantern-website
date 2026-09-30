@@ -4,4 +4,6 @@ node_modules/
 Thumbs.db
 *.log
 downloads/*.zip
+dist/
 .vercel/
+.worktrees/
