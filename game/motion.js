@@ -7,8 +7,8 @@
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const lerp = (a, b, t) => a + (b - a) * clamp(t, 0, 1);
   // Locomotion phase stays distance-driven, so the feet remain tied to actual travel.
-  // The renderer blends between these six poses to avoid visible frame stepping.
-  // Six authored poses read best near 10 frames per second at full walking
+  // The body translation is interpolated independently from these six poses.
+  // They read best near 10 frames per second at full walking
   // speed. Translation still runs at 60 Hz, so the body moves smoothly while
   // the feet keep a deliberate, human cadence instead of flickering.
   const PLAYER_PHASE_PER_PIXEL = 0.025;
@@ -221,8 +221,10 @@
     }
     if((state.landing||0)>0)return {mode:"land",phase,airMode:null,gait:state.gaitMode};
     const speed=Math.abs(p.vx||0);
-    if(state.gaitMode==="run"){if(speed<148)state.gaitMode="walk";}
-    else if(speed>182)state.gaitMode="run";
+    // Standard movement tops out at 220. The run sheet is a low, airborne dash
+    // silhouette, so using it for ordinary travel makes Ayan appear to float.
+    if(state.gaitMode==="run"){if(speed<260)state.gaitMode="walk";}
+    else if(speed>320)state.gaitMode="run";
     if((state.turn||0)>0&&speed>8)return {mode:"turn",phase,airMode:null,gait:state.gaitMode};
     // Keep the same speed thresholds for state selection and sprite selection.
     // Start/stop retain the distance-driven cycle, so feet decelerate with the body.
@@ -254,8 +256,6 @@
     const turnEase = turnT * turnT * (3 - 2 * turnT);
     const facingBlend = state.turn > 0 ? lerp(state.turnFrom, state.turnTo, turnEase) : (p.facing || 1);
     const landing = state.landing > 0 ? state.landingStrength * (state.landing / 0.12) : 0;
-    const gaitActive=["startMove","move","stopMove","turn"].includes(motion.mode);
-    const gait = gaitActive ? Math.sin(motion.phase * Math.PI * 2) * Math.min(1, moving / 220) : 0;
     const idleBreath=motion.mode==="idle"?Math.sin((typeof gameTime!=="undefined"?gameTime:0)*2.15):0;
     const startLean=(state.inputMove||0)*Math.max(0,1-state.locomotionBlend)*.016;
     const brakeLean=-(Math.sign(p.vx||state.lastFacing)||1)*state.brakeBlend*.022;
@@ -268,7 +268,7 @@
     }
     const rotation=clamp(clamp((p.vx||0)*0.00042,-0.022,0.022)+startLean+brakeLean+(1-turnEase)*0.020*(state.turnTo-state.turnFrom)+attackRotation,-0.045,0.045);
     return {
-      offsetX: gait * 0.8 + attackOffsetX - (state.inputMove||0)*Math.max(0,1-state.locomotionBlend)*0.7,
+      offsetX: attackOffsetX - (state.inputMove||0)*Math.max(0,1-state.locomotionBlend)*0.7,
       offsetY: inAir ? clamp((p.vy || 0) * 0.0024, -1.0, 1.8) : landing * 1.6 + idleBreath*.42,
       rotation: rotation + idleBreath*.0025,
       scaleX: clamp(1 + landing * 0.012 + attackScaleX-idleBreath*.0015,0.985,1.018),

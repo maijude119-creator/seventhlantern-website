@@ -437,23 +437,18 @@ function drawSpriteAsset(key,cx,bottom,maxHeight,flip=false,alpha=1){
 // Per-frame source-pixel corrections measured from the stable upper-body mass.
 // The authored PNG canvases are not identical widths, so raw image-centre pivots
 // make Ayan jump sideways when frames change. Corrections mirror with facing.
-const PLAYER_LOCOMOTION_X_CORRECTION={
-  // Walk frames are normalized onto one shared canvas/pivot in the 6-frame pass.
-  ayanWalk1:0,ayanWalk2:0,ayanWalk3:0,ayanWalk4:0,ayanWalk5:0,ayanWalk6:0,
-  ayanRun1:0,ayanRun2:0,ayanRun3:0,ayanRun4:0,ayanRun5:0,ayanRun6:0
+const PLAYER_LOCOMOTION_CORRECTION={
+  // Measured against the idle upper-body centre and visible shoe line. The
+  // authored walk canvases share dimensions, but their painted mass does not.
+  ayanWalk1:{x:-5.0,y:-2.7},ayanWalk2:{x:-4.6,y:-2.7},ayanWalk3:{x:-4.2,y:-2.7},
+  ayanWalk4:{x:-5.3,y:-2.7},ayanWalk5:{x:-6.5,y:-1.7},ayanWalk6:{x:-5.8,y:-2.7},
+  ayanRun1:{x:0,y:0},ayanRun2:{x:0,y:0},ayanRun3:{x:0,y:0},
+  ayanRun4:{x:0,y:0},ayanRun5:{x:0,y:0},ayanRun6:{x:0,y:0}
 };
 function drawPlayerLocomotionSprite(key,cx,bottom,maxHeight,flip=false,alpha=1){
   if(!artReady(key))return false;
-  const img=art[key],sourceCorrection=PLAYER_LOCOMOTION_X_CORRECTION[key]||0;
-  const displayCorrection=sourceCorrection*(maxHeight/img.naturalHeight)*(flip?-1:1);
-  return drawSpriteAsset(key,cx+displayCorrection,bottom,maxHeight,flip,alpha);
-}
-function smoothLocomotionBlend(frac){
-  // Keep the render-position interpolation, but avoid long full-body crossfades:
-  // the authored walk frames differ too much in silhouette and otherwise read as a ghost double.
-  const t=clamp((frac-.80)/.18,0,1);
-  const eased=t*t*(3-2*t);
-  return eased*.14;
+  const img=art[key],correction=PLAYER_LOCOMOTION_CORRECTION[key]||{x:0,y:0},scale=maxHeight/img.naturalHeight;
+  return drawSpriteAsset(key,cx+correction.x*scale*(flip?-1:1),bottom+correction.y*scale,maxHeight,flip,alpha);
 }
 
 function drawProductionSeries(prefix,count,index,cx,bottom,maxHeight,flip=false,alpha=1){
@@ -3318,7 +3313,7 @@ function update(dt){
   updateChapterMechanisms(dt);updatePlayer(dt);updateEpilogue(dt);
   if(["opera","bamboo","ferry","city","final"].includes(world.currentRegion)&&!world.bossActive&&!world.epilogueActive&&!player.attack&&!player.charging&&Math.abs(player.vx)<24)routeHintIdle=Math.min(9,routeHintIdle+dt);
   else routeHintIdle=Math.max(0,routeHintIdle-dt*2.5);
-  if(player.grounded&&Math.abs(player.vx)>65&&!player.dodging){sound.stepTimer-=dt;if(sound.stepTimer<=0){const g=getPrimaryGroundAt(player.x+player.w*.5);sound.footstep(g?.kind||g?.surfaceType||"stone",Math.abs(player.vx));sound.stepTimer=Math.abs(player.vx)>175?.22:.31;}}else sound.stepTimer=Math.min(sound.stepTimer,.08);
+  if(player.grounded&&Math.abs(player.vx)>65&&!player.dodging){sound.stepTimer-=dt;if(sound.stepTimer<=0){const g=getPrimaryGroundAt(player.x+player.w*.5);sound.footstep(g?.kind||g?.surfaceType||"stone",Math.abs(player.vx));sound.stepTimer=Math.abs(player.vx)>175?.27:.34;}}else sound.stepTimer=Math.min(sound.stepTimer,.08);
   if(!world.epilogueActive){
     updateEnemies(dt);
     const pressure=world.enemies.filter(e=>e.alive&&!e.inactive&&Math.abs(e.x-player.x)<190).length;
@@ -4333,13 +4328,13 @@ function drawPlayerV2(){
     // six true poses, so sample it at 2x frame density without changing stride speed.
     const locomotionPhase=(motionState.phase||0)*2;
     const locomotionCount=locomotionFrames.length;
-    const frameBlend=window.Motion?.getPlayerGaitFrameBlend?.(locomotionPhase,locomotionCount)||{index:((Math.floor(locomotionPhase)%locomotionCount)+locomotionCount)%locomotionCount,nextIndex:((Math.floor(locomotionPhase)+1)%locomotionCount),blend:0};
+    const locomotionIndex=((Math.floor(locomotionPhase)%locomotionCount)+locomotionCount)%locomotionCount;
     let pose="ayanIdle";
     if(motionState.mode==="hurt"||player.dead)pose="ayanHurt";
     else if(player.dodging>0)pose="ayanDodge";
     else if(motionState.mode==="air")pose="ayanJump";
     else if(player.lampHeld&&world.lamp.focused&&!moving&&!player.attack)pose="ayanRaise";
-    else if(moving)pose=locomotionFrames[frameBlend.index];
+    else if(moving)pose=locomotionFrames[locomotionIndex];
     const visual=window.Motion?.getPlayerVisual?.()||{};
     ctx.save();const paperState=paperBodyState();if(player.invuln>0&&Math.floor(t*20)%2)ctx.globalAlpha=.38;else if(paperState.critical)ctx.globalAlpha=1-paperState.translucency;
     glow(x+20,y+50,58,"#f3b34a",.18);
@@ -4388,14 +4383,10 @@ function drawPlayerV2(){
       const lp=clamp(1-(motionState.landTimer||0)/.12,0,1),li=lp<.52?4:5;
       if(!drawProductionSeries("prodAyanJump_",6,li,0,0,176,player.facing<0,1))drawSpriteAsset("ayanCrouch",0,0,152,player.facing<0,1);
     }else if(moving&&player.grounded&&!player.dodging){
-      // Blend neighboring authored poses at the shared pivot to soften the discrete
-      // six-frame source animation without changing travel speed or stride timing.
-      // Normal alpha compositing preserves the authored palette. Additive
-      // blending made the character flash brighter twice per pose change.
-      ctx.save();ctx.globalCompositeOperation="source-over";
-      drawPlayerLocomotionSprite(pose,0,0,174,player.facing<0,1,1-frameBlend.blend);
-      if(frameBlend.blend>.001)drawPlayerLocomotionSprite(locomotionFrames[frameBlend.nextIndex],0,0,174,player.facing<0,1,frameBlend.blend);
-      ctx.restore();
+      // The body travels at render-frame cadence, while the authored poses stay
+      // discrete. Full-body alpha blends create two heads, two coats and a soft
+      // lantern between frames, which reads as judder rather than smooth motion.
+      drawPlayerLocomotionSprite(pose,0,0,174,player.facing<0,1,1);
     }else if(pose==="ayanIdle"){
       const idleIndex=Math.floor(gameTime*2.2)%4;
       if(!drawProductionSeries("prodAyanIdle_",4,idleIndex,0,0,174,player.facing<0,1))drawSpriteAsset("ayanIdle",0,0,174,player.facing<0,1);
@@ -4924,6 +4915,6 @@ resizeGameViewport();
 buildWorld();resetPlayer();requestAnimationFrame(loop);
 
 // Expose a minimal diagnostic surface for automated smoke tests.
-window.__GAME__={animationRevision:'v5.4.0',getState:()=>({state,difficulty,dialogue:currentDialogue?.text||null,guidance:{title:guidance.title,timer:guidance.timer},camera:{x:cameraX},render:{alpha:renderAlpha,interpolated:getInterpolatedRenderState()},combatFx:combatFx?.getDiagnostics?.()||null,player:{x:player.x,y:player.y,groundY:player.groundY,health:player.health,paperBody:paperBodyState(),paperHurtFlash:player.paperHurtFlash||0,weapon:player.weapon?.type||null,lampHeld:player.lampHeld,grounded:player.grounded,dodging:player.dodging,guarding:player.guarding,attacking:!!player.attack,attackCharged:!!player.attack?.charged,attackKind:player.attack?.kind||null,attackStep:player.attack?.step||0,lampOrigin:lampPose(),checkpointX:player.checkpointX,checkpointY:player.checkpointY,dead:player.dead,deathPhase:player.deathPhase,deathVisualTimer:player.deathVisualTimer,interact:player.interactTarget?.kind||null,interactId:player.interactTarget?.obj?.id||null,interactCandidates:(player.interactCandidates||[]).map(t=>interactionTargetId(t)),interactIndex:player.interactIndex||0,hurtbox:getPlayerHurtbox(),hurtTimer:player.hurtTimer||0},world:{embers:world.emberCount,doorOpen:world.doorOpen,gateOpen:world.gateOpen,wallHp:world.wallHp,puzzleStep:world.puzzleStep,bossActive:world.bossActive,bossDefeated:world.bossDefeated,currentRegion:world.currentRegion,lanternsRecovered:world.lanternsRecovered,finalReady:world.finalReady,finalChoice:world.finalChoice,endingChoiceActive:world.endingChoiceActive,endingChoiceIndex:world.endingChoiceIndex,epilogueActive:world.epilogueActive,epilogueBeat:world.epilogueBeat,epilogueComplete:world.epilogueComplete,chapterProgress:JSON.parse(JSON.stringify(world.chapterProgress)),tutorialFlags:{...world.tutorialFlags},storyApparitions:Object.keys(world.storyRuntime?.active||{}),ritualBladeUnlocked:world.ritualBladeUnlocked,bossHp:world.boss?Math.max(0,Math.round(world.boss.hp)):null,bossPhase:world.boss?.phase||null,bossPendingPhase:world.boss?.pendingPhase||null,bossTransition:world.boss?.phaseTransition||0,bossLastAttack:world.boss?.lastAttackId||null,particles:world.particles.length,projectiles:world.projectiles.length,lanternStable:world.lamp.stable,firstEncounterStarted:world.firstEncounterStarted,firstShadowDefeated:world.firstShadowDefeated,enemiesAlive:world.enemies.filter(e=>e.alive).length,drops:world.drops.map(d=>({type:d.type,x:Math.round(d.x),y:Math.round(d.y)})),nearEnemies:world.enemies.filter(e=>e.alive&&!e.inactive&&Math.abs(e.x-player.x)<180).map(e=>({type:e.type,hp:Math.round(e.hp),x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,aiState:e.aiState,exposed:e.exposed})),enemies:world.enemies.filter(e=>e.alive).map(e=>({id:e.id,type:e.type,x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,grounded:e.grounded,aiState:e.aiState,stuckTimer:e.stuckTimer||0}))},errors:window.__GAME_ERRORS__||[]}),start:startGame,teleport:(x,y=480)=>{player.x=x;player.y=y;player.vx=player.vy=0;const g=getPrimaryGroundAt(player.x+player.w*.5);if(g){player.y=g.y-player.h;player.grounded=true;}},damage:damagePlayer};
+window.__GAME__={animationRevision:'v5.4.1',getState:()=>({state,difficulty,dialogue:currentDialogue?.text||null,guidance:{title:guidance.title,timer:guidance.timer},camera:{x:cameraX},render:{alpha:renderAlpha,interpolated:getInterpolatedRenderState()},combatFx:combatFx?.getDiagnostics?.()||null,player:{x:player.x,y:player.y,groundY:player.groundY,health:player.health,paperBody:paperBodyState(),paperHurtFlash:player.paperHurtFlash||0,weapon:player.weapon?.type||null,lampHeld:player.lampHeld,grounded:player.grounded,dodging:player.dodging,guarding:player.guarding,attacking:!!player.attack,attackCharged:!!player.attack?.charged,attackKind:player.attack?.kind||null,attackStep:player.attack?.step||0,lampOrigin:lampPose(),checkpointX:player.checkpointX,checkpointY:player.checkpointY,dead:player.dead,deathPhase:player.deathPhase,deathVisualTimer:player.deathVisualTimer,interact:player.interactTarget?.kind||null,interactId:player.interactTarget?.obj?.id||null,interactCandidates:(player.interactCandidates||[]).map(t=>interactionTargetId(t)),interactIndex:player.interactIndex||0,hurtbox:getPlayerHurtbox(),hurtTimer:player.hurtTimer||0},world:{embers:world.emberCount,doorOpen:world.doorOpen,gateOpen:world.gateOpen,wallHp:world.wallHp,puzzleStep:world.puzzleStep,bossActive:world.bossActive,bossDefeated:world.bossDefeated,currentRegion:world.currentRegion,lanternsRecovered:world.lanternsRecovered,finalReady:world.finalReady,finalChoice:world.finalChoice,endingChoiceActive:world.endingChoiceActive,endingChoiceIndex:world.endingChoiceIndex,epilogueActive:world.epilogueActive,epilogueBeat:world.epilogueBeat,epilogueComplete:world.epilogueComplete,chapterProgress:JSON.parse(JSON.stringify(world.chapterProgress)),tutorialFlags:{...world.tutorialFlags},storyApparitions:Object.keys(world.storyRuntime?.active||{}),ritualBladeUnlocked:world.ritualBladeUnlocked,bossHp:world.boss?Math.max(0,Math.round(world.boss.hp)):null,bossPhase:world.boss?.phase||null,bossPendingPhase:world.boss?.pendingPhase||null,bossTransition:world.boss?.phaseTransition||0,bossLastAttack:world.boss?.lastAttackId||null,particles:world.particles.length,projectiles:world.projectiles.length,lanternStable:world.lamp.stable,firstEncounterStarted:world.firstEncounterStarted,firstShadowDefeated:world.firstShadowDefeated,enemiesAlive:world.enemies.filter(e=>e.alive).length,drops:world.drops.map(d=>({type:d.type,x:Math.round(d.x),y:Math.round(d.y)})),nearEnemies:world.enemies.filter(e=>e.alive&&!e.inactive&&Math.abs(e.x-player.x)<180).map(e=>({type:e.type,hp:Math.round(e.hp),x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,aiState:e.aiState,exposed:e.exposed})),enemies:world.enemies.filter(e=>e.alive).map(e=>({id:e.id,type:e.type,x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,grounded:e.grounded,aiState:e.aiState,stuckTimer:e.stuckTimer||0}))},errors:window.__GAME_ERRORS__||[]}),start:startGame,teleport:(x,y=480)=>{player.x=x;player.y=y;player.vx=player.vy=0;const g=getPrimaryGroundAt(player.x+player.w*.5);if(g){player.y=g.y-player.h;player.grounded=true;}},damage:damagePlayer};
 window.__ASSET_STATUS__=()=>({loaded:artLoaded,total:Object.keys(artFiles).length,missing:missingRequiredAssets(),ready:requiredAssetsReady(),official:Object.values(artFiles).filter(src=>src.includes("assets/SeventhLantern/")).length});
 window.addEventListener("error",e=>window.__GAME_ERRORS__.push(String(e.error||e.message)));

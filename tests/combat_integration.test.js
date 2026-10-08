@@ -8,8 +8,8 @@ const read = (file) => fs.readFileSync(path.join(repo, file), 'utf8');
 
 test('game page loads the combat effects runtime before the game bootstrap', () => {
   const html = read('game/index.html');
-  const effects = html.indexOf('<script src="combat_fx.js?v=5.4.0"></script>');
-  const game = html.indexOf('<script src="game.js?v=5.4.0"></script>');
+  const effects = html.indexOf('<script src="combat_fx.js?v=5.4.1"></script>');
+  const game = html.indexOf('<script src="game.js?v=5.4.1"></script>');
   assert.ok(effects >= 0, 'combat_fx.js script tag should exist');
   assert.ok(game >= 0, 'game.js script tag should exist');
   assert.ok(effects < game, 'combat effects must load before game.js creates the system');
