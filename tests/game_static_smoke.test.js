@@ -56,6 +56,7 @@ test('site surfaces announce Web v5.4.0 and the actually published Windows versi
   const config = read('site-config.js');
   const home = read('index.html');
   const play = read('play.html');
+  const playScript = read('assets/site-play-v2.5.js');
   const download = read('download.html');
   const changelog = read('changelog.html');
   const readme = read('README.md');
@@ -65,6 +66,9 @@ test('site surfaces announce Web v5.4.0 and the actually published Windows versi
   assert.match(config, /webGameVersion:\s*"v5\.4\.0"/);
   assert.match(home, /data-web-version>v5\.4\.0/);
   assert.match(play, /Web v5\.4\.0/);
+  assert.match(play, /site-play-v2\.5\.js\?v=2\.5\.1/);
+  assert.match(playScript, /SEVENTH_LANTERN_CONFIG\?\.webGameVersion\|\|'v5\.4\.0'/);
+  assert.doesNotMatch(playScript, /v5\.2\.0/);
   assert.match(play, /data-win-version>v1\.1\.0/);
   assert.match(download, /data-web-version>v5\.4\.0/);
   assert.match(download, /data-win-version>v1\.1\.0/);
