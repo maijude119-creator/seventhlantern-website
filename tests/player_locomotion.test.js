@@ -37,3 +37,13 @@ test('player renderer uses fractional progress to blend adjacent gait poses', ()
   assert.match(renderer, /getPlayerGaitFrameBlend\?\.\(locomotionPhase,locomotionCount\)/);
   assert.match(renderer, /locomotionFrames\[frameBlend\.nextIndex\]/);
 });
+
+test('full-speed travel keeps a readable human stride instead of cycling the feet too fast',()=>{
+  const g=runtime({motion:true});
+  g.run('startGame("normal",false,true);currentDialogue=null;dialogueQueue=[];keys.d=true');
+  const start=g.run('window.Motion.getPlayerMotionState().phase');
+  g.run('for(let i=0;i<60;i++)update(1/60)');
+  const end=g.run('window.Motion.getPlayerMotionState().phase');
+  const cycles=(end-start)*2/6;
+  assert.ok(cycles>=1.35&&cycles<=2.05,`expected 1.35–2.05 strides per second, got ${cycles}`);
+});

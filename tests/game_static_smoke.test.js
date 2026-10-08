@@ -42,16 +42,17 @@ test('effect budgets remain explicit and reduced-motion CSS removes menu animati
   assert.match(css, /animation-duration:\s*0\.01ms!important/);
 });
 
-test('web build version and game script cache keys are v5.3.4', () => {
+test('web build version and game script cache keys are v5.4.0', () => {
   const html = read('game/index.html');
   const gameSource = read('game/game.js');
-  assert.match(html, /WEB BUILD v5\.3\.4/);
-  const scripts = [...html.matchAll(/<script src="([^"]+\.js\?v=5\.3\.4)"><\/script>/g)];
-  assert.equal(scripts.length, 6, 'every local game runtime script should use the v5.3.4 cache key');
-  assert.match(gameSource, /animationRevision:'v5\.3\.4'/);
+  assert.match(html, /WEB BUILD v5\.4\.0/);
+  const scripts = [...html.matchAll(/<script src="([^"]+\.js\?v=5\.4\.0)"><\/script>/g)];
+  assert.equal(scripts.length, 6, 'every local game runtime script should use the v5.4.0 cache key');
+  assert.match(gameSource, /animationRevision:'v5\.4\.0'/);
+  assert.match(html, /id="continueEchoBtn"[^>]*>继续回响旅程<\/button>/);
 });
 
-test('site surfaces announce Web v5.3.4 and the actually published Windows version', () => {
+test('site surfaces announce Web v5.4.0 and the actually published Windows version', () => {
   const config = read('site-config.js');
   const home = read('index.html');
   const play = read('play.html');
@@ -61,19 +62,19 @@ test('site surfaces announce Web v5.3.4 and the actually published Windows versi
   const offlineReadme = read('READ_ME.txt');
 
   assert.match(config, /windowsVersion:\s*"v1\.1\.0"/);
-  assert.match(config, /webGameVersion:\s*"v5\.3\.4"/);
-  assert.match(home, /data-web-version>v5\.3\.4/);
-  assert.match(play, /Web v5\.3\.4/);
+  assert.match(config, /webGameVersion:\s*"v5\.4\.0"/);
+  assert.match(home, /data-web-version>v5\.4\.0/);
+  assert.match(play, /Web v5\.4\.0/);
   assert.match(play, /data-win-version>v1\.1\.0/);
-  assert.match(download, /data-web-version>v5\.3\.4/);
+  assert.match(download, /data-web-version>v5\.4\.0/);
   assert.match(download, /data-win-version>v1\.1\.0/);
-  assert.match(changelog, /2026\.09\.30/);
-  assert.match(changelog, /GAME v5\.3\.4/);
+  assert.match(changelog, /2026\.10\.08/);
+  assert.match(changelog, /GAME v5\.4\.0/);
   assert.match(changelog, /GAME v5\.3\.2/);
   assert.match(changelog, /GAME v5\.3\.1/);
   assert.match(changelog, /GAME v5\.3\.0 · Windows v1\.1\.0/);
   assert.match(changelog, /Windows v1\.1\.0/);
-  assert.match(readme, /Web 游戏版本：v5\.3\.4/);
+  assert.match(readme, /Web 游戏版本：v5\.4\.0/);
   assert.match(readme, /Windows 已发布版本：v1\.1\.0/);
   assert.match(offlineReadme, /Windows v1\.1\.0/);
 });

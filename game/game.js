@@ -23,6 +23,7 @@ const dialogueText = document.getElementById("dialogueText");
 const speakerEl = document.getElementById("speaker");
 const toastEl = document.getElementById("toast");
 const continueBtn = document.getElementById("continueBtn");
+const continueEchoBtn = document.getElementById("continueEchoBtn");
 const portraitCanvas = document.getElementById("portraitCanvas");
 const portraitCtx = portraitCanvas?.getContext?.("2d") || null;
 const settingsPanel = document.getElementById("settings");
@@ -743,27 +744,52 @@ function restoreChapterRuntime(){
 const SAVE_KEY="seventhLanternSave";
 const SAVE_BACKUP_KEY="seventhLanternSaveBackup";
 const SAVE_VERSION=5;
+let saveStatus="idle";
+const saveKeys=mode=>mode==="echo"?["seventhLanternEchoSave","seventhLanternEchoSaveBackup"]:[SAVE_KEY,SAVE_BACKUP_KEY];
+const isRecord=v=>!!v&&typeof v==="object"&&!Array.isArray(v);
 function parseSave(raw){try{const s=JSON.parse(raw);return s&&typeof s==="object"&&Number.isFinite(s.savedAt)?s:null}catch(_e){return null}}
 function saveLooksUsable(s){
-  if(!s||!Number.isFinite(s.savedAt))return false;
+  if(!isRecord(s)||!Number.isFinite(s.savedAt))return false;
   const x=s.checkpointX??s.x,y=s.checkpointY??s.y;
   if(!Number.isFinite(x)||!Number.isFinite(y))return false;
   if(x<-100||x>world.width+100||y<-300||y>900)return false;
-  if(s.chapterProgress!=null&&typeof s.chapterProgress!=="object")return false;
+  if(s.difficulty!=null&&!Object.hasOwn(difficultyValues,s.difficulty))return false;
+  for(const key of ["noteFound","lampHeld","lampAcquired","lampFocused","bossDefeated","ritualBladeUnlocked"]){if(s[key]!=null&&typeof s[key]!=="boolean")return false;}
+  for(const key of ["visitedRegions","clueReactionSeen","npcRevealSeen"]){if(s[key]!=null&&(!Array.isArray(s[key])||!s[key].every(v=>typeof v==="string")))return false;}
+  for(const key of ["emberIds","switches"]){if(s[key]!=null&&(!Array.isArray(s[key])||!s[key].every(v=>Number.isInteger(v)&&v>=0&&v<=2)))return false;}
+  for(const [key,max] of [["wallHp",3],["puzzleStep",3],["emberCount",3],["lanternsRecovered",6]]){if(s[key]!=null&&(!Number.isInteger(s[key])||s[key]<0||s[key]>max))return false;}
+  for(const key of ["tutorialFlags","runStats"]){if(s[key]!=null&&!isRecord(s[key]))return false;}
+  if(s.chapterProgress!=null){
+    if(!isRecord(s.chapterProgress))return false;
+    for(const [id,defaults] of Object.entries(freshChapterProgress())){
+      const p=s.chapterProgress[id];if(p==null)continue;if(!isRecord(p))return false;
+      for(const [key,value] of Object.entries(defaults)){
+        if(p[key]===undefined)continue;
+        if(Array.isArray(value)){
+          if(!Array.isArray(p[key]))return false;
+          const strings=["clues","memoryFinds","echoFinds","echoNpcSeen"].includes(key);
+          if(!p[key].every(v=>strings?typeof v==="string":(key==="assignments"&&v===null)||Number.isInteger(v)&&v>=0&&v<=2))return false;
+          if(key==="assignments"&&p[key].length!==3)return false;
+        }else if(value===null){if(p[key]!==null&&(!Number.isInteger(p[key])||p[key]<0||p[key]>2))return false;}
+        else if(typeof value==="boolean"){if(typeof p[key]!=="boolean")return false;}
+        else if(!Number.isFinite(p[key])||p[key]<0)return false;
+      }
+      if(id==="final"&&["candidate","dial","nameChoice"].some(k=>p[k]!=null&&(!Number.isInteger(p[k])||p[k]>6)))return false;
+    }
+  }
   if(s.currentRegion!=null&&!SCENE_REGIONS.some(r=>r.id===s.currentRegion))return false;
   return true;
 }
-function loadBestSave(){
+function loadSaveCandidates(mode="normal"){
   try{
-    const primary=parseSave(localStorage.getItem(SAVE_KEY));
-    const backup=parseSave(localStorage.getItem(SAVE_BACKUP_KEY));
-    const p=saveLooksUsable(primary)?primary:null,b=saveLooksUsable(backup)?backup:null;
-    const best=p&&b?(p.savedAt>=b.savedAt?p:b):(p||b||null);
-    if(best&&best===b&&!p){
-      try{localStorage.setItem(SAVE_KEY,JSON.stringify(b));}catch(_e){}
-    }
-    return best;
-  }catch(_e){return null}
+    const keys=mode==="echo"?[...saveKeys(mode),SAVE_KEY,SAVE_BACKUP_KEY]:saveKeys(mode);
+    return keys.map(key=>({key,save:parseSave(localStorage.getItem(key))})).filter(({save})=>saveLooksUsable(save)&&((save.difficulty==="echo")===(mode==="echo"))).sort((a,b)=>b.save.savedAt-a.save.savedAt);
+  }catch(_e){return []}
+}
+function loadBestSave(mode="normal"){return loadSaveCandidates(mode)[0]?.save||null;}
+function refreshContinueButtons(){
+  continueBtn.classList.toggle("hidden",!loadBestSave());
+  continueEchoBtn?.classList.toggle("hidden",!loadBestSave("echo"));
 }
 const REGION_RESUME_POINTS={
   paperShop:{x:270,y:538},alleyA:{x:1240,y:538},alleyB:{x:2940,y:538},
@@ -1319,19 +1345,15 @@ function resetPlayer(x=220,y=480){
 
 function startGame(diff="normal", fromSave=false, assetsConfirmed=false){
   if(!assetsConfirmed&&!requiredAssetsReady()){ensureAssetsThenStart(diff,fromSave);return;}
+  clearTransientInputState();
   difficulty=diff; dialogueQueue=[]; currentDialogue=null; dialogueEl.classList.remove("visible"); buildWorld(); resetPlayer();
   runStats={playMs:0,deaths:0,hitsTaken:0};
   hidePanels(); state="playing";
   if(fromSave){
-    try{
-      const save=loadBestSave();
-      if(!save){
-        state="menu";showPanel(menu);continueBtn.classList.add("hidden");
-        showToast("没有可恢复的有效存档，已取消继续游戏",2.8);
-        return;
-      }
-      if(save){
-        difficulty=save.difficulty||diff; buildWorld();
+    for(const candidate of loadSaveCandidates(diff)){
+      try{
+        const save=candidate.save;
+        difficulty=save.difficulty||diff; buildWorld();resetPlayer();
         let savedRegion=save.currentRegion||sceneRegionAt(save.checkpointX??save.x??220).id;
         // Migrate old saves that recorded chapter progress but kept the first
         // lamp's coordinates. A defeated first boss always resumes at Act II.
@@ -1379,11 +1401,18 @@ function startGame(diff="normal", fromSave=false, assetsConfirmed=false){
         for(const c of world.checkpoints)c.lit=c.lit||c.x<=player.checkpointX+2;
         cameraX=clamp(player.x-W*.35,0,world.width-W);resetCameraRuntime();
         sound.start();
-        showToast("从上次点亮的存档灯继续");
+        const primaryKey=saveKeys(diff)[0],recovered=candidate.key!==primaryKey;
+        if(recovered){try{localStorage.setItem(primaryKey,JSON.stringify(save));}catch(_e){}}
+        showToast(recovered?"已恢复备用存档，从上次安全进度继续":"从上次点亮的存档灯继续");
+        saveStatus="saved";refreshContinueButtons();
         if(["opera","bamboo","ferry","city","final"].includes(savedRegion))showGuidance("上次停在这里",chapterObjective(savedRegion),"",4.4);
         return;
-      }
-    }catch(_e){}
+      }catch(error){window.__GAME_ERRORS__.push(`Save:restore:${String(error?.message||error)}`);}
+    }
+    difficulty=diff;buildWorld();resetPlayer();dialogueQueue=[];currentDialogue=null;
+    state="menu";showPanel(menu);refreshContinueButtons();
+    showToast("未能恢复存档，已返回标题。原始存档已保留",4);
+    return;
   }
   sound.start();
   if(difficulty==="echo")showGuidance("回响模式","无阴镇记得你走过的路。敌人更强、Boss 更快，谜题不再主动给出失败提示。","存档仍独立保存",5.5);
@@ -1403,12 +1432,22 @@ function saveGame(options={}){
     chapterProgress:world.chapterProgress,ritualBladeUnlocked:world.ritualBladeUnlocked,
     visitedRegions:Object.keys(world.visitedRegions).filter(k=>world.visitedRegions[k]),clueReactionSeen:Object.keys(world.clueReactionSeen||{}).filter(k=>world.clueReactionSeen[k]),npcRevealSeen:Object.keys(world.npcRevealSeen||{}).filter(k=>world.npcRevealSeen[k]),tutorialFlags:{...world.tutorialFlags},runStats:{...runStats}};
   try{
+    // Earlier versions put Echo in the normal slot. Preserve it before any write.
+    const legacy=loadSaveCandidates("echo").find(c=>c.key===SAVE_KEY||c.key===SAVE_BACKUP_KEY);
+    if(legacy){
+      const echoKey=saveKeys("echo")[0],existing=parseSave(localStorage.getItem(echoKey));
+      if(!saveLooksUsable(existing)||existing.savedAt<legacy.save.savedAt)localStorage.setItem(echoKey,JSON.stringify(legacy.save));
+    }
     const payload=JSON.stringify(data);
-    const previous=localStorage.getItem(SAVE_KEY),previousParsed=parseSave(previous);
-    if(saveLooksUsable(previousParsed))localStorage.setItem(SAVE_BACKUP_KEY,previous);
-    localStorage.setItem(SAVE_KEY,payload);
-    continueBtn.classList.remove("hidden");
-  }catch(_e){}
+    const [primaryKey,backupKey]=saveKeys(difficulty);
+    const previous=localStorage.getItem(primaryKey),previousParsed=parseSave(previous);
+    if(saveLooksUsable(previousParsed)&&((previousParsed.difficulty==="echo")===(difficulty==="echo")))localStorage.setItem(backupKey,previous);
+    localStorage.setItem(primaryKey,payload);
+    saveStatus="saved";refreshContinueButtons();return true;
+  }catch(_e){
+    if(saveStatus!=="error")showToast("进度未能保存：浏览器存储不可用，请保留当前页面后重试",5);
+    saveStatus="error";return false;
+  }
 }
 
 function hidePanels(){ document.querySelectorAll(".panel").forEach(p=>p.classList.remove("visible")); }
@@ -3221,6 +3260,9 @@ function update(dt){
   lanternWarningTimer=Math.max(0,lanternWarningTimer-dt);world.combatReleaseTimer=Math.max(0,(world.combatReleaseTimer||0)-dt);player.paperHurtFlash=Math.max(0,(player.paperHurtFlash||0)-dt);if(world.clueReaction?.timer>0){world.clueReaction.timer=Math.max(0,world.clueReaction.timer-dt);world.clueReaction.active=world.clueReaction.timer>0;}if(guidance.timer>0)guidance.timer-=dt; if(toastTimer>0){toastTimer-=dt;if(toastTimer<=0)toastEl.classList.remove("visible");}
   sound.update(world.epilogueActive?"epilogue":world.currentRegion,dt);
   if(reducedMotionQuery?.matches)hitStop=0;
+  // Pause must remain available during dialogue and hit-stop. Otherwise a
+  // player cannot safely leave the page while a long line or impact is active.
+  if(state==="playing"&&pressed.has("escape")){ saveForSuspend();clearTransientInputState();state="paused";showPanel(pausePanel);return; }
   if(hitStop>0){hitStop=Math.max(0,hitStop-dt);pressed.clear();released.clear();return;}
   if(state!=="playing"||currentDialogue){pressed.clear();released.clear();return;}
   updateCombatFx(dt);
@@ -3234,13 +3276,17 @@ function update(dt){
     if(pressed.has("e")){const choice=endingChoices[world.endingChoiceIndex];beginEpilogue(choice.id);}
     pressed.clear();released.clear();return;
   }
-  if(pressed.has("escape")){ saveForSuspend();clearTransientInputState();state="paused";showPanel(pausePanel);return; }
   if(window.Motion)window.Motion.beforeUpdate(dt);
   if((player.interactCandidates?.length||0)>1){
     if(pressed.has("arrowup")||(!lampIsFocused()&&pressed.has("w")))cycleInteraction(-1);
     if(pressed.has("arrowdown")||(!lampIsFocused()&&pressed.has("s")))cycleInteraction(1);
   }
-  if(pressed.has("e")) interact();
+  if(pressed.has("e")){
+    interact();
+    // Opening a line freezes the world immediately; combat and movement do
+    // not get one invisible extra tick behind the dialogue panel.
+    if(currentDialogue){pressed.clear();released.clear();return;}
+  }
   if(!world.epilogueActive&&pressed.has("q")&&!player.dead&&!window.Motion?.interacting()){
     if(world.lampAcquired){
       setLampFocused(!world.lamp.focused);sound.lantern(world.lamp.focused?"raise":"lower");
@@ -3259,7 +3305,7 @@ function update(dt){
     if(next>player.chargeCue){player.chargeCue=next;sound.play("ruler_charge",{volume:next===2?.55:.38,rate:next===2?1.08:.92});createBurst(player.x+20,player.y+38,next===2?"#f4cf72":"#c85a42",next===2?10:6);}
   }
   if(!world.epilogueActive&&released.has("j")&&player.charging){const held=performance.now()-jHoldStart;player.charging=false;player.chargeLevel=0;startAttack(held);}
-  if(!world.epilogueActive&&pressed.has("l")&&!player.dead){
+  if(!world.epilogueActive&&pressed.has("l")&&!player.dead&&player.dodging<=0){
     const attackProgress=player.attack?(player.attack.time/player.attack.total):1;
     const earlyThirdCancel=!!player.attack&&!player.attack.charged&&player.attack.step===3&&player.attack.time<=FIXED_DT*3.1;
     const cancelPoint=player.attack?.charged?.72:.55;
@@ -3286,7 +3332,7 @@ function update(dt){
     world.lamp.stable=lerp(world.lamp.stable,1,clamp(dt*4,0,1));
   }
   updateParticles(dt);
-  if(world.endingTimer>0){world.endingTimer-=dt;if(world.endingTimer<=0&&world.epilogueActive){world.epilogueActive=false;world.epilogueComplete=true;recordRunCompletion();state="ending";try{localStorage.removeItem(SAVE_KEY);localStorage.removeItem(SAVE_BACKUP_KEY);continueBtn.classList.add("hidden");}catch(_e){}}}
+  if(world.endingTimer>0){world.endingTimer-=dt;if(world.endingTimer<=0&&world.epilogueActive){world.epilogueActive=false;world.epilogueComplete=true;recordRunCompletion();state="ending";try{for(const key of saveKeys(difficulty))localStorage.removeItem(key);refreshContinueButtons();}catch(_e){}}}
   if(window.Motion)window.Motion.afterUpdate(dt);
   else {const target=clamp(player.x-W*.38,0,world.width-W);cameraX=lerp(cameraX,target,clamp(dt*4.5,0,1));}
   shake=Math.max(0,shake-dt*28); pressed.clear();released.clear();
@@ -4344,7 +4390,9 @@ function drawPlayerV2(){
     }else if(moving&&player.grounded&&!player.dodging){
       // Blend neighboring authored poses at the shared pivot to soften the discrete
       // six-frame source animation without changing travel speed or stride timing.
-      ctx.save();ctx.globalCompositeOperation="lighter";
+      // Normal alpha compositing preserves the authored palette. Additive
+      // blending made the character flash brighter twice per pose change.
+      ctx.save();ctx.globalCompositeOperation="source-over";
       drawPlayerLocomotionSprite(pose,0,0,174,player.facing<0,1,1-frameBlend.blend);
       if(frameBlend.blend>.001)drawPlayerLocomotionSprite(locomotionFrames[frameBlend.nextIndex],0,0,174,player.facing<0,1,frameBlend.blend);
       ctx.restore();
@@ -4810,18 +4858,22 @@ function loop(now){
   render();requestAnimationFrame(loop);
 }
 
+const controlKey=e=>({KeyA:"a",KeyD:"d",KeyW:"w",KeyS:"s",KeyJ:"j",KeyK:"k",KeyL:"l",KeyQ:"q",KeyE:"e",Escape:"escape",ArrowUp:"arrowup",ArrowDown:"arrowdown"}[e.code]||(e.key||"").toLowerCase());
+const isTextEntry=e=>["INPUT","TEXTAREA","SELECT"].includes(e.target?.tagName)||e.target?.isContentEditable;
 window.addEventListener("keydown",e=>{
-  const k=e.key.toLowerCase();if(["a","d","w","s","j","k","l","q","e","escape","arrowup","arrowdown"].includes(k))e.preventDefault();
+  const k=controlKey(e);if(isTextEntry(e))return;if(["a","d","w","s","j","k","l","q","e","escape","arrowup","arrowdown"].includes(k))e.preventDefault();
+  if(e.repeat)return;
   if(!keys[k])pressed.add(k);keys[k]=true;
   if(k==="l"&&!lHoldStart)lHoldStart=performance.now();
   if(k==="e"&&currentDialogue){nextDialogue();pressed.delete("e");}
   else if(k==="e"&&state==="ending"){clearTransientInputState();state="menu";window.AudioManager?.stopEnvironment?.();sound.started=false;sound.ambienceRegion="";showPanel(menu);currentDialogue=null;dialogueEl.classList.remove("visible");}
 });
-window.addEventListener("keyup",e=>{const k=e.key.toLowerCase();keys[k]=false;released.add(k);if(k==="l"){lReleasedDuration=performance.now()-lHoldStart;lHoldStart=0;}});
+window.addEventListener("keyup",e=>{const k=controlKey(e);keys[k]=false;released.add(k);if(k==="l"){lReleasedDuration=performance.now()-lHoldStart;lHoldStart=0;}});
 window.addEventListener("blur",()=>{if(state==="playing"){saveForSuspend();clearTransientInputState();state="paused";showPanel(pausePanel);}else clearTransientInputState();});
 
 document.getElementById("startBtn").onclick=()=>{showPanel(difficultyPanel);};
 continueBtn.onclick=()=>ensureAssetsThenStart("normal",true);
+continueEchoBtn?.addEventListener("click",()=>ensureAssetsThenStart("echo",true));
 document.getElementById("helpBtn").onclick=()=>showPanel(helpPanel);
 document.getElementById("helpClose").onclick=()=>showPanel(menu);
 document.getElementById("backBtn").onclick=()=>showPanel(menu);
@@ -4847,12 +4899,13 @@ for(const [id,key] of [["screenShakeSetting","screenShake"],["flashSetting","fla
   const el=document.getElementById(id);el?.addEventListener("change",()=>{gameSettings[key]=!!el.checked;persistSettings();});
 }
 
-try{if(loadBestSave())continueBtn.classList.remove("hidden");}catch(_e){}
+try{refreshContinueButtons();}catch(_e){}
 function clearTransientInputState(){
   pressed.clear();released.clear();
   for(const k of Object.keys(keys))keys[k]=false;
   jHoldStart=0;lHoldStart=0;lReleasedDuration=0;
   if(player){player.charging=false;player.chargeLevel=0;player.chargeCue=0;player.attackBuffer=0;player.attackBufferHeld=0;}
+  window.Motion?.resetTransientInput?.();
 }
 let lastSuspendSaveAt=0;
 function saveForSuspend(){
@@ -4864,13 +4917,13 @@ function saveForSuspend(){
   }
   return false;
 }
-document.addEventListener("visibilitychange",()=>{if(document.hidden){saveForSuspend();clearTransientInputState();}});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){saveForSuspend();clearTransientInputState();if(state==="playing"){state="paused";showPanel(pausePanel);}}});
 window.addEventListener("pagehide",()=>{saveForSuspend();clearTransientInputState();});
 window.addEventListener("resize",resizeGameViewport);
 resizeGameViewport();
 buildWorld();resetPlayer();requestAnimationFrame(loop);
 
 // Expose a minimal diagnostic surface for automated smoke tests.
-window.__GAME__={animationRevision:'v5.3.4',getState:()=>({state,difficulty,dialogue:currentDialogue?.text||null,guidance:{title:guidance.title,timer:guidance.timer},camera:{x:cameraX},render:{alpha:renderAlpha,interpolated:getInterpolatedRenderState()},combatFx:combatFx?.getDiagnostics?.()||null,player:{x:player.x,y:player.y,groundY:player.groundY,health:player.health,paperBody:paperBodyState(),paperHurtFlash:player.paperHurtFlash||0,weapon:player.weapon?.type||null,lampHeld:player.lampHeld,grounded:player.grounded,dodging:player.dodging,guarding:player.guarding,attacking:!!player.attack,attackCharged:!!player.attack?.charged,attackKind:player.attack?.kind||null,attackStep:player.attack?.step||0,lampOrigin:lampPose(),checkpointX:player.checkpointX,checkpointY:player.checkpointY,dead:player.dead,deathPhase:player.deathPhase,deathVisualTimer:player.deathVisualTimer,interact:player.interactTarget?.kind||null,interactId:player.interactTarget?.obj?.id||null,interactCandidates:(player.interactCandidates||[]).map(t=>interactionTargetId(t)),interactIndex:player.interactIndex||0,hurtbox:getPlayerHurtbox(),hurtTimer:player.hurtTimer||0},world:{embers:world.emberCount,doorOpen:world.doorOpen,gateOpen:world.gateOpen,wallHp:world.wallHp,puzzleStep:world.puzzleStep,bossActive:world.bossActive,bossDefeated:world.bossDefeated,currentRegion:world.currentRegion,lanternsRecovered:world.lanternsRecovered,finalReady:world.finalReady,finalChoice:world.finalChoice,endingChoiceActive:world.endingChoiceActive,endingChoiceIndex:world.endingChoiceIndex,epilogueActive:world.epilogueActive,epilogueBeat:world.epilogueBeat,epilogueComplete:world.epilogueComplete,chapterProgress:JSON.parse(JSON.stringify(world.chapterProgress)),tutorialFlags:{...world.tutorialFlags},storyApparitions:Object.keys(world.storyRuntime?.active||{}),ritualBladeUnlocked:world.ritualBladeUnlocked,bossHp:world.boss?Math.max(0,Math.round(world.boss.hp)):null,bossPhase:world.boss?.phase||null,bossPendingPhase:world.boss?.pendingPhase||null,bossTransition:world.boss?.phaseTransition||0,bossLastAttack:world.boss?.lastAttackId||null,particles:world.particles.length,projectiles:world.projectiles.length,lanternStable:world.lamp.stable,firstEncounterStarted:world.firstEncounterStarted,firstShadowDefeated:world.firstShadowDefeated,enemiesAlive:world.enemies.filter(e=>e.alive).length,drops:world.drops.map(d=>({type:d.type,x:Math.round(d.x),y:Math.round(d.y)})),nearEnemies:world.enemies.filter(e=>e.alive&&!e.inactive&&Math.abs(e.x-player.x)<180).map(e=>({type:e.type,hp:Math.round(e.hp),x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,aiState:e.aiState,exposed:e.exposed})),enemies:world.enemies.filter(e=>e.alive).map(e=>({id:e.id,type:e.type,x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,grounded:e.grounded,aiState:e.aiState,stuckTimer:e.stuckTimer||0}))},errors:window.__GAME_ERRORS__||[]}),start:startGame,teleport:(x,y=480)=>{player.x=x;player.y=y;player.vx=player.vy=0;const g=getPrimaryGroundAt(player.x+player.w*.5);if(g){player.y=g.y-player.h;player.grounded=true;}},damage:damagePlayer};
+window.__GAME__={animationRevision:'v5.4.0',getState:()=>({state,difficulty,dialogue:currentDialogue?.text||null,guidance:{title:guidance.title,timer:guidance.timer},camera:{x:cameraX},render:{alpha:renderAlpha,interpolated:getInterpolatedRenderState()},combatFx:combatFx?.getDiagnostics?.()||null,player:{x:player.x,y:player.y,groundY:player.groundY,health:player.health,paperBody:paperBodyState(),paperHurtFlash:player.paperHurtFlash||0,weapon:player.weapon?.type||null,lampHeld:player.lampHeld,grounded:player.grounded,dodging:player.dodging,guarding:player.guarding,attacking:!!player.attack,attackCharged:!!player.attack?.charged,attackKind:player.attack?.kind||null,attackStep:player.attack?.step||0,lampOrigin:lampPose(),checkpointX:player.checkpointX,checkpointY:player.checkpointY,dead:player.dead,deathPhase:player.deathPhase,deathVisualTimer:player.deathVisualTimer,interact:player.interactTarget?.kind||null,interactId:player.interactTarget?.obj?.id||null,interactCandidates:(player.interactCandidates||[]).map(t=>interactionTargetId(t)),interactIndex:player.interactIndex||0,hurtbox:getPlayerHurtbox(),hurtTimer:player.hurtTimer||0},world:{embers:world.emberCount,doorOpen:world.doorOpen,gateOpen:world.gateOpen,wallHp:world.wallHp,puzzleStep:world.puzzleStep,bossActive:world.bossActive,bossDefeated:world.bossDefeated,currentRegion:world.currentRegion,lanternsRecovered:world.lanternsRecovered,finalReady:world.finalReady,finalChoice:world.finalChoice,endingChoiceActive:world.endingChoiceActive,endingChoiceIndex:world.endingChoiceIndex,epilogueActive:world.epilogueActive,epilogueBeat:world.epilogueBeat,epilogueComplete:world.epilogueComplete,chapterProgress:JSON.parse(JSON.stringify(world.chapterProgress)),tutorialFlags:{...world.tutorialFlags},storyApparitions:Object.keys(world.storyRuntime?.active||{}),ritualBladeUnlocked:world.ritualBladeUnlocked,bossHp:world.boss?Math.max(0,Math.round(world.boss.hp)):null,bossPhase:world.boss?.phase||null,bossPendingPhase:world.boss?.pendingPhase||null,bossTransition:world.boss?.phaseTransition||0,bossLastAttack:world.boss?.lastAttackId||null,particles:world.particles.length,projectiles:world.projectiles.length,lanternStable:world.lamp.stable,firstEncounterStarted:world.firstEncounterStarted,firstShadowDefeated:world.firstShadowDefeated,enemiesAlive:world.enemies.filter(e=>e.alive).length,drops:world.drops.map(d=>({type:d.type,x:Math.round(d.x),y:Math.round(d.y)})),nearEnemies:world.enemies.filter(e=>e.alive&&!e.inactive&&Math.abs(e.x-player.x)<180).map(e=>({type:e.type,hp:Math.round(e.hp),x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,aiState:e.aiState,exposed:e.exposed})),enemies:world.enemies.filter(e=>e.alive).map(e=>({id:e.id,type:e.type,x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,grounded:e.grounded,aiState:e.aiState,stuckTimer:e.stuckTimer||0}))},errors:window.__GAME_ERRORS__||[]}),start:startGame,teleport:(x,y=480)=>{player.x=x;player.y=y;player.vx=player.vy=0;const g=getPrimaryGroundAt(player.x+player.w*.5);if(g){player.y=g.y-player.h;player.grounded=true;}},damage:damagePlayer};
 window.__ASSET_STATUS__=()=>({loaded:artLoaded,total:Object.keys(artFiles).length,missing:missingRequiredAssets(),ready:requiredAssetsReady(),official:Object.values(artFiles).filter(src=>src.includes("assets/SeventhLantern/")).length});
 window.addEventListener("error",e=>window.__GAME_ERRORS__.push(String(e.error||e.message)));

@@ -8,7 +8,10 @@
   const lerp = (a, b, t) => a + (b - a) * clamp(t, 0, 1);
   // Locomotion phase stays distance-driven, so the feet remain tied to actual travel.
   // The renderer blends between these six poses to avoid visible frame stepping.
-  const PLAYER_PHASE_PER_PIXEL = 0.042;
+  // Six authored poses read best near 10 frames per second at full walking
+  // speed. Translation still runs at 60 Hz, so the body moves smoothly while
+  // the feet keep a deliberate, human cadence instead of flickering.
+  const PLAYER_PHASE_PER_PIXEL = 0.025;
   const PLAYER_TELEPORT_PHASE_CUTOFF = 80;
   const state = {
     coyote: 0,
@@ -43,6 +46,11 @@
   };
 
   M.interacting = () => false;
+  M.resetTransientInput = () => {
+    state.jumpBuffer=0;
+    state.coyote=0;
+    state.inputMove=0;
+  };
 
   function samplePlayerTravelPhase(){
     const p=player||{};
