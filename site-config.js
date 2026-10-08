@@ -3,8 +3,8 @@ window.SEVENTH_LANTERN_CONFIG = {
   author: "买橘的",
   version: "v1.1.0",
   windowsVersion: "v1.1.0",
-  webGameVersion: "v5.4.1",
-  siteBuild: "v2.7.2",
+  webGameVersion: "v5.4.2",
+  siteBuild: "v2.7.3",
   releaseDate: "2026.10.08",
   download: {
     url: "https://github.com/maijude119-creator/seventhlantern-website/releases/download/v1.1.0/SeventhLantern_v1.1.0_Windows.zip",

@@ -180,25 +180,14 @@
     npcLanternGirlLookBack:"assets/SeventhLantern/Characters/NPC/LanternGirl/CHR_LanternGirl_LookBack.png"
   };
 
-  const images = Object.create(null);
-  let loaded=0, failed=0;
-  const required = Object.keys(files);
-  if(typeof Image!=="undefined"){
-    // Decode in small batches. Loading more than two hundred PNGs at once made
-    // some Canvas implementations reject otherwise valid images under memory
-    // pressure, which looked like a random missing-asset bug.
-    const queue=Object.entries(files);let cursor=0,active=0;
-    const pump=()=>{
-      while(active<8&&cursor<queue.length){
-        const [id,src]=queue[cursor++],img=new Image();images[id]=img;active++;
-        img.onload=()=>{loaded++;active--;pump();};
-        img.onerror=()=>{failed++;active--;(window.__GAME_ERRORS__||(window.__GAME_ERRORS__=[])).push(`production-asset:${src}`);pump();};
-        img.src=src;
-      }
-    };
-    pump();
-  }
-  const ready=id=>!!images[id]?.complete&&images[id].naturalWidth>0;
+  // Only the paper shop and rain-alley modules block the first playable frame.
+  // Later chapters continue loading in browser-idle slices after startup.
+  const startupKeys=Object.keys(files).filter(id=>/^(shop|impInn|npcShenPo)/.test(id));
+  const loader=window.GameAssetLoader.create({
+    files,startupKeys,concurrency:4,deferredConcurrency:2,deferredDelay:2500,
+    onError:src=>(window.__GAME_ERRORS__||(window.__GAME_ERRORS__=[])).push(`production-asset:${src}`)
+  });
+  const images=loader.images,ready=loader.ready;
 
   function draw(ctx,id,cx,bottom,maxHeight,flip=false,alpha=1){
     if(!ready(id))return false;const img=images[id];const s=maxHeight/img.naturalHeight,dw=img.naturalWidth*s,dh=maxHeight;
@@ -311,7 +300,8 @@
     return drawWorld(ctx,[region],cameraX,W,H,gameTime);
   }
 
-  window.ProductionAssets={files,images,ready,draw,drawTopLeft,drawScene,drawWorld,supplementalLayouts,getStatus:()=>({loaded,total:required.length,failed,missing:required.filter(k=>!ready(k)),supplementalRegions:Object.keys(supplementalLayouts)})};
+  const status=()=>({...loader.getStatus(),supplementalRegions:Object.keys(supplementalLayouts)});
+  window.ProductionAssets={files,images,ready,draw,drawTopLeft,drawScene,drawWorld,supplementalLayouts,getStatus:status,getStartupStatus:status};
 })();
 
 // Phase 2 shortcut art intentionally reuses authored chapter modules already registered

@@ -15,6 +15,7 @@ module.exports=function runtime(options={}){
  const window={document,CombatFX:options.CombatFX===undefined?CombatFX:options.CombatFX,innerWidth:1280,innerHeight:720,location:{search:''},addEventListener:listen(windowEvents),matchMedia:()=>({matches:!!options.reducedMotion,addEventListener:noop})};
  const sandbox={window,document,console,URLSearchParams,performance:{now:()=>0},requestAnimationFrame:noop,setTimeout:noop,clearTimeout:noop,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)}};
  vm.createContext(sandbox);
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'../../game/asset_loader.js'),'utf8'),sandbox,{filename:'asset_loader.js'});
  vm.runInContext(options.source || fs.readFileSync(path.join(__dirname,'../../game/game.js'),'utf8'),sandbox,{filename:'game.js'});
  if(options.motion)vm.runInContext(fs.readFileSync(path.join(__dirname,'../../game/motion.js'),'utf8'),sandbox,{filename:'motion.js'});
  return {run:code=>vm.runInContext(code,sandbox),window,ctx,storage,nodes,

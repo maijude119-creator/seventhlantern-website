@@ -338,34 +338,34 @@ for(const [key,folder,stem] of [
   registerFrameSeries(`prodNpc${key}Walk_`,`assets/Production/NPC/${folder}`,`NPC_${stem}_Walk_`,6);
 }
 
-let artLoaded = 0;
-if(typeof Image!=="undefined"){
-  for(const [key,src] of Object.entries(artFiles)){
-    const img=new Image(); art[key]=img;
-    img.onload=()=>{artLoaded++;};
-    img.onerror=()=>{(window.__GAME_ERRORS__||(window.__GAME_ERRORS__=[])).push(`asset:${src}`);};
-    img.src=src;
-  }
-}
-const artReady = key => !!art[key]?.complete && art[key].naturalWidth>0;
+// The opening shop and rain alley are the only art that blocks play. Loading
+// all six chapters here decoded roughly 151 MiB before the first click could
+// respond, so later enemies, NPCs and bosses now fill the browser's idle time.
+const STARTUP_ASSET_KEYS=Object.keys(artFiles).filter(key=>
+  /^(hero|enemies|weapons|shop|alley|ayan|portraitAyan|portraitShenPo|paper|shadow|guideLantern|ritualBlade|talismanBundle|lanternStake|ropeHook|item|shopDoor|shopCounter|shopPaper|alleyDoor|alleyWindow|alleyArch|vfx|uiLantern)/.test(key)
+);
+const artLoader=window.GameAssetLoader.create({
+  files:artFiles,startupKeys:STARTUP_ASSET_KEYS,concurrency:4,deferredConcurrency:2,deferredDelay:2500,images:art,
+  onError:src=>(window.__GAME_ERRORS__||(window.__GAME_ERRORS__=[])).push(`asset:${src}`)
+});
+const artReady = artLoader.ready;
 const DEBUG_QUERY = typeof URLSearchParams!=="undefined" ? new URLSearchParams(window.location?.search||"") : {get:()=>null};
 // QA modes are opt-in only. Normal builds render neither collision geometry nor asset diagnostics.
 const DEBUG_COLLIDERS = DEBUG_QUERY.get("colliders")==="1";
 const ASSET_QA_MODE = DEBUG_QUERY.get("assetqa")==="1";
 const DEBUG_PLACEHOLDERS = DEBUG_QUERY.get("missing") === "1";
-const REQUIRED_ASSET_KEYS = Object.keys(artFiles);
 function productionAssetsReady(){
-  const st=window.ProductionAssets?.getStatus?.();
-  return !st || (st.failed===0 && st.loaded>=st.total);
+  const st=window.ProductionAssets?.getStartupStatus?.();
+  return !st || st.ready;
 }
-function requiredAssetsReady(){ return REQUIRED_ASSET_KEYS.every(artReady) && productionAssetsReady(); }
+function requiredAssetsReady(){ return artLoader.getStatus().ready && productionAssetsReady(); }
 function missingRequiredAssets(){
-  const missing=REQUIRED_ASSET_KEYS.filter(k=>!artReady(k));
-  const st=window.ProductionAssets?.getStatus?.();
+  const missing=STARTUP_ASSET_KEYS.filter(k=>!artReady(k));
+  const st=window.ProductionAssets?.getStartupStatus?.();
   if(st?.missing?.length)missing.push(...st.missing.map(k=>`production:${k}`));
   return missing;
 }
-window.GameAssetStatus=()=>{const prod=window.ProductionAssets?.getStatus?.()||{loaded:0,total:0,failed:0,missing:[]};const artTotal=REQUIRED_ASSET_KEYS.length;const artReadyCount=REQUIRED_ASSET_KEYS.filter(artReady).length;const artFailed=REQUIRED_ASSET_KEYS.filter(k=>art[k]?.complete&&!(art[k]?.naturalWidth>0)).length;const total=artTotal+(prod.total||0);const loaded=artReadyCount+(prod.loaded||0);const failed=artFailed+(prod.failed||0);return{loaded,total,failed,ready:total>0&&loaded>=total&&failed===0,missing:missingRequiredAssets(),errors:[...(window.__GAME_ERRORS__||[])]};};
+window.GameAssetStatus=()=>{const artStatus=artLoader.getStatus(),prod=window.ProductionAssets?.getStartupStatus?.()||{startupLoaded:0,startupTotal:0,startupFailed:0,loaded:0,total:0};const total=artStatus.startupTotal+(prod.startupTotal||0),loaded=artStatus.startupLoaded+(prod.startupLoaded||0),failed=artStatus.startupFailed+(prod.startupFailed||0);return{loaded,total,failed,ready:total>0&&loaded>=total&&failed===0,backgroundLoaded:artStatus.loaded+(prod.loaded||0),backgroundTotal:artStatus.total+(prod.total||0),missing:missingRequiredAssets(),errors:[...(window.__GAME_ERRORS__||[])]};};
 
 function ensureAssetsThenStart(diff="normal",fromSave=false){
   if(requiredAssetsReady()) return startGame(diff,fromSave,true);
@@ -4915,6 +4915,6 @@ resizeGameViewport();
 buildWorld();resetPlayer();requestAnimationFrame(loop);
 
 // Expose a minimal diagnostic surface for automated smoke tests.
-window.__GAME__={animationRevision:'v5.4.1',getState:()=>({state,difficulty,dialogue:currentDialogue?.text||null,guidance:{title:guidance.title,timer:guidance.timer},camera:{x:cameraX},render:{alpha:renderAlpha,interpolated:getInterpolatedRenderState()},combatFx:combatFx?.getDiagnostics?.()||null,player:{x:player.x,y:player.y,groundY:player.groundY,health:player.health,paperBody:paperBodyState(),paperHurtFlash:player.paperHurtFlash||0,weapon:player.weapon?.type||null,lampHeld:player.lampHeld,grounded:player.grounded,dodging:player.dodging,guarding:player.guarding,attacking:!!player.attack,attackCharged:!!player.attack?.charged,attackKind:player.attack?.kind||null,attackStep:player.attack?.step||0,lampOrigin:lampPose(),checkpointX:player.checkpointX,checkpointY:player.checkpointY,dead:player.dead,deathPhase:player.deathPhase,deathVisualTimer:player.deathVisualTimer,interact:player.interactTarget?.kind||null,interactId:player.interactTarget?.obj?.id||null,interactCandidates:(player.interactCandidates||[]).map(t=>interactionTargetId(t)),interactIndex:player.interactIndex||0,hurtbox:getPlayerHurtbox(),hurtTimer:player.hurtTimer||0},world:{embers:world.emberCount,doorOpen:world.doorOpen,gateOpen:world.gateOpen,wallHp:world.wallHp,puzzleStep:world.puzzleStep,bossActive:world.bossActive,bossDefeated:world.bossDefeated,currentRegion:world.currentRegion,lanternsRecovered:world.lanternsRecovered,finalReady:world.finalReady,finalChoice:world.finalChoice,endingChoiceActive:world.endingChoiceActive,endingChoiceIndex:world.endingChoiceIndex,epilogueActive:world.epilogueActive,epilogueBeat:world.epilogueBeat,epilogueComplete:world.epilogueComplete,chapterProgress:JSON.parse(JSON.stringify(world.chapterProgress)),tutorialFlags:{...world.tutorialFlags},storyApparitions:Object.keys(world.storyRuntime?.active||{}),ritualBladeUnlocked:world.ritualBladeUnlocked,bossHp:world.boss?Math.max(0,Math.round(world.boss.hp)):null,bossPhase:world.boss?.phase||null,bossPendingPhase:world.boss?.pendingPhase||null,bossTransition:world.boss?.phaseTransition||0,bossLastAttack:world.boss?.lastAttackId||null,particles:world.particles.length,projectiles:world.projectiles.length,lanternStable:world.lamp.stable,firstEncounterStarted:world.firstEncounterStarted,firstShadowDefeated:world.firstShadowDefeated,enemiesAlive:world.enemies.filter(e=>e.alive).length,drops:world.drops.map(d=>({type:d.type,x:Math.round(d.x),y:Math.round(d.y)})),nearEnemies:world.enemies.filter(e=>e.alive&&!e.inactive&&Math.abs(e.x-player.x)<180).map(e=>({type:e.type,hp:Math.round(e.hp),x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,aiState:e.aiState,exposed:e.exposed})),enemies:world.enemies.filter(e=>e.alive).map(e=>({id:e.id,type:e.type,x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,grounded:e.grounded,aiState:e.aiState,stuckTimer:e.stuckTimer||0}))},errors:window.__GAME_ERRORS__||[]}),start:startGame,teleport:(x,y=480)=>{player.x=x;player.y=y;player.vx=player.vy=0;const g=getPrimaryGroundAt(player.x+player.w*.5);if(g){player.y=g.y-player.h;player.grounded=true;}},damage:damagePlayer};
-window.__ASSET_STATUS__=()=>({loaded:artLoaded,total:Object.keys(artFiles).length,missing:missingRequiredAssets(),ready:requiredAssetsReady(),official:Object.values(artFiles).filter(src=>src.includes("assets/SeventhLantern/")).length});
+window.__GAME__={animationRevision:'v5.4.2',getState:()=>({state,difficulty,dialogue:currentDialogue?.text||null,guidance:{title:guidance.title,timer:guidance.timer},camera:{x:cameraX},render:{alpha:renderAlpha,interpolated:getInterpolatedRenderState()},combatFx:combatFx?.getDiagnostics?.()||null,player:{x:player.x,y:player.y,groundY:player.groundY,health:player.health,paperBody:paperBodyState(),paperHurtFlash:player.paperHurtFlash||0,weapon:player.weapon?.type||null,lampHeld:player.lampHeld,grounded:player.grounded,dodging:player.dodging,guarding:player.guarding,attacking:!!player.attack,attackCharged:!!player.attack?.charged,attackKind:player.attack?.kind||null,attackStep:player.attack?.step||0,lampOrigin:lampPose(),checkpointX:player.checkpointX,checkpointY:player.checkpointY,dead:player.dead,deathPhase:player.deathPhase,deathVisualTimer:player.deathVisualTimer,interact:player.interactTarget?.kind||null,interactId:player.interactTarget?.obj?.id||null,interactCandidates:(player.interactCandidates||[]).map(t=>interactionTargetId(t)),interactIndex:player.interactIndex||0,hurtbox:getPlayerHurtbox(),hurtTimer:player.hurtTimer||0},world:{embers:world.emberCount,doorOpen:world.doorOpen,gateOpen:world.gateOpen,wallHp:world.wallHp,puzzleStep:world.puzzleStep,bossActive:world.bossActive,bossDefeated:world.bossDefeated,currentRegion:world.currentRegion,lanternsRecovered:world.lanternsRecovered,finalReady:world.finalReady,finalChoice:world.finalChoice,endingChoiceActive:world.endingChoiceActive,endingChoiceIndex:world.endingChoiceIndex,epilogueActive:world.epilogueActive,epilogueBeat:world.epilogueBeat,epilogueComplete:world.epilogueComplete,chapterProgress:JSON.parse(JSON.stringify(world.chapterProgress)),tutorialFlags:{...world.tutorialFlags},storyApparitions:Object.keys(world.storyRuntime?.active||{}),ritualBladeUnlocked:world.ritualBladeUnlocked,bossHp:world.boss?Math.max(0,Math.round(world.boss.hp)):null,bossPhase:world.boss?.phase||null,bossPendingPhase:world.boss?.pendingPhase||null,bossTransition:world.boss?.phaseTransition||0,bossLastAttack:world.boss?.lastAttackId||null,particles:world.particles.length,projectiles:world.projectiles.length,lanternStable:world.lamp.stable,firstEncounterStarted:world.firstEncounterStarted,firstShadowDefeated:world.firstShadowDefeated,enemiesAlive:world.enemies.filter(e=>e.alive).length,drops:world.drops.map(d=>({type:d.type,x:Math.round(d.x),y:Math.round(d.y)})),nearEnemies:world.enemies.filter(e=>e.alive&&!e.inactive&&Math.abs(e.x-player.x)<180).map(e=>({type:e.type,hp:Math.round(e.hp),x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,aiState:e.aiState,exposed:e.exposed})),enemies:world.enemies.filter(e=>e.alive).map(e=>({id:e.id,type:e.type,x:Math.round(e.x),y:Math.round(e.y),groundY:e.groundY,grounded:e.grounded,aiState:e.aiState,stuckTimer:e.stuckTimer||0}))},errors:window.__GAME_ERRORS__||[]}),start:startGame,teleport:(x,y=480)=>{player.x=x;player.y=y;player.vx=player.vy=0;const g=getPrimaryGroundAt(player.x+player.w*.5);if(g){player.y=g.y-player.h;player.grounded=true;}},damage:damagePlayer};
+window.__ASSET_STATUS__=()=>{const st=artLoader.getStatus();return{loaded:st.loaded,total:st.total,startupLoaded:st.startupLoaded,startupTotal:st.startupTotal,missing:missingRequiredAssets(),ready:requiredAssetsReady(),official:Object.values(artFiles).filter(src=>src.includes("assets/SeventhLantern/")).length};};
 window.addEventListener("error",e=>window.__GAME_ERRORS__.push(String(e.error||e.message)));

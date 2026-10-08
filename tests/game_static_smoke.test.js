@@ -42,17 +42,17 @@ test('effect budgets remain explicit and reduced-motion CSS removes menu animati
   assert.match(css, /animation-duration:\s*0\.01ms!important/);
 });
 
-test('web build version and game script cache keys are v5.4.1', () => {
+test('web build version and game script cache keys are v5.4.2', () => {
   const html = read('game/index.html');
   const gameSource = read('game/game.js');
-  assert.match(html, /WEB BUILD v5\.4\.1/);
-  const scripts = [...html.matchAll(/<script src="([^"]+\.js\?v=5\.4\.1)"><\/script>/g)];
-  assert.equal(scripts.length, 6, 'every local game runtime script should use the v5.4.1 cache key');
-  assert.match(gameSource, /animationRevision:'v5\.4\.1'/);
+  assert.match(html, /WEB BUILD v5\.4\.2/);
+  const scripts = [...html.matchAll(/<script src="([^"]+\.js\?v=5\.4\.2)"><\/script>/g)];
+  assert.equal(scripts.length, 7, 'every local game runtime script should use the v5.4.2 cache key');
+  assert.match(gameSource, /animationRevision:'v5\.4\.2'/);
   assert.match(html, /id="continueEchoBtn"[^>]*>继续回响旅程<\/button>/);
 });
 
-test('site surfaces announce Web v5.4.1 and the actually published Windows version', () => {
+test('site surfaces announce Web v5.4.2 and the actually published Windows version', () => {
   const config = read('site-config.js');
   const home = read('index.html');
   const play = read('play.html');
@@ -63,24 +63,24 @@ test('site surfaces announce Web v5.4.1 and the actually published Windows versi
   const offlineReadme = read('READ_ME.txt');
 
   assert.match(config, /windowsVersion:\s*"v1\.1\.0"/);
-  assert.match(config, /webGameVersion:\s*"v5\.4\.1"/);
-  assert.match(config, /siteBuild:\s*"v2\.7\.2"/);
-  assert.match(home, /data-web-version>v5\.4\.1/);
-  assert.match(play, /Web v5\.4\.1/);
-  assert.match(play, /site-play-v2\.5\.js\?v=2\.5\.2/);
-  assert.match(playScript, /SEVENTH_LANTERN_CONFIG\?\.webGameVersion\|\|'v5\.4\.1'/);
+  assert.match(config, /webGameVersion:\s*"v5\.4\.2"/);
+  assert.match(config, /siteBuild:\s*"v2\.7\.3"/);
+  assert.match(home, /data-web-version>v5\.4\.2/);
+  assert.match(play, /Web v5\.4\.2/);
+  assert.match(play, /site-play-v2\.5\.js\?v=2\.5\.3/);
+  assert.match(playScript, /SEVENTH_LANTERN_CONFIG\?\.webGameVersion\|\|'v5\.4\.2'/);
   assert.doesNotMatch(playScript, /v5\.2\.0/);
   assert.match(play, /data-win-version>v1\.1\.0/);
-  assert.match(download, /data-web-version>v5\.4\.1/);
+  assert.match(download, /data-web-version>v5\.4\.2/);
   assert.match(download, /data-win-version>v1\.1\.0/);
   assert.match(changelog, /2026\.10\.08/);
-  assert.match(changelog, /GAME v5\.4\.1 已发布/);
+  assert.match(changelog, /GAME v5\.4\.2 已发布/);
   assert.match(changelog, /GAME v5\.4\.0/);
   assert.match(changelog, /GAME v5\.3\.2/);
   assert.match(changelog, /GAME v5\.3\.1/);
   assert.match(changelog, /GAME v5\.3\.0 · Windows v1\.1\.0/);
   assert.match(changelog, /Windows v1\.1\.0/);
-  assert.match(readme, /Web 游戏版本：v5\.4\.1/);
+  assert.match(readme, /Web 游戏版本：v5\.4\.2/);
   assert.match(readme, /Windows 已发布版本：v1\.1\.0/);
   assert.match(offlineReadme, /Windows v1\.1\.0/);
 });

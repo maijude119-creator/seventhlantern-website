@@ -7,7 +7,7 @@
   const launch=document.createElement('section');
   launch.className='play-launch';
   launch.setAttribute('aria-label','进入无阴镇');
-  const webVersion=window.SEVENTH_LANTERN_CONFIG?.webGameVersion||'v5.4.1';
+  const webVersion=window.SEVENTH_LANTERN_CONFIG?.webGameVersion||'v5.4.2';
   launch.innerHTML='<div class="play-launch-bg" aria-hidden="true"></div><div class="play-launch-fog" aria-hidden="true"></div><div class="play-launch-card"><span class="launch-lantern" aria-hidden="true"></span><div class="play-launch-copy"><p class="launch-kicker">ONLINE PLAY · WUYIN TOWN</p><h1>灯亮了。<br><span>要进去吗？</span></h1><p class="launch-desc">网页版会在当前页面直接运行。游戏资源已经在后台准备，进入后可使用全屏、声音控制与本地存档。</p></div><div class="launch-status"><div><small>GAME BUILD</small><strong data-web-version>'+webVersion+'</strong></div><div><small>SAVE</small><strong>浏览器本地存档</strong></div><div><small>RECOMMENDED</small><strong>PC · Chrome / Edge</strong></div></div><div class="launch-actions"><button class="launch-enter" type="button">点灯进入无阴镇</button><button class="launch-guide" type="button">先看操作</button><a href="/">返回官网</a></div><div class="launch-foot"><i></i><span>第一次进入建议打开声音 · ESC 可暂停</span></div></div>';
   shell.prepend(launch);
 
